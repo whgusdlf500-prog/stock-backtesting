@@ -68,7 +68,7 @@
       { "symbol": "JNJ", "ko": "존슨앤드존슨", "en": "Johnson & Johnson", "aliases": ["존슨앤드존슨", "johnson and johnson"] },
       { "symbol": "PG", "ko": "프록터앤갬블", "en": "Procter & Gamble", "aliases": ["프록터앤갬블", "procter and gamble"] },
       { "symbol": "UNH", "ko": "유나이티드헬스", "en": "UnitedHealth", "aliases": ["유나이티드헬스", "unitedhealth"] },
-      { "symbol": "XOM", "ko": "엑슨모빌", "en": "Exxon Mobil", "aliases": ["엑슨모빌", "exxon mobil"] },
+      { "symbol": "XOM", "ko": "엑슨모빌", "en": "Exxon Mobil", "aliases": ["엑슨모빌", "엑손모빌", "exxon mobil", "exxon"] },
       { "symbol": "CVX", "ko": "셰브론", "en": "Chevron", "aliases": ["쉐브론", "셰브론", "chevron"] },
       { "symbol": "LLY", "ko": "일라이 릴리", "en": "Eli Lilly", "aliases": ["일라이릴리", "eli lilly"] },
       { "symbol": "ABBV", "ko": "애브비", "en": "AbbVie", "aliases": ["애브비", "abbvie"] },
@@ -83,7 +83,9 @@
       { "symbol": "GS", "ko": "골드만삭스", "en": "Goldman Sachs", "aliases": ["골드만삭스", "goldman sachs"] },
       { "symbol": "MS", "ko": "모건스탠리", "en": "Morgan Stanley", "aliases": ["모건스탠리", "morgan stanley"] },
       { "symbol": "CAT", "ko": "캐터필러", "en": "Caterpillar", "aliases": ["캐터필러", "caterpillar"] },
-      { "symbol": "HON", "ko": "허니웰", "en": "Honeywell", "aliases": ["허니웰", "honeywell"] }
+      { "symbol": "HON", "ko": "허니웰", "en": "Honeywell", "aliases": ["허니웰", "honeywell"] },
+      { "symbol": "APP", "ko": "앱러빈", "en": "AppLovin", "aliases": ["applovin", "app", "앱러빈", "앱로빈"] },
+      { "symbol": "HOOD", "ko": "로빈후드", "en": "Robinhood", "aliases": ["robinhood", "hood", "로빈후드", "앱로빈"] }
     ]
   }
 }

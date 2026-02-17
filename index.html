@@ -542,6 +542,7 @@
         codeLookupButton: "코드 찾기",
         codeLookupEmpty: "검색어를 입력하세요.",
         codeLookupNoResult: "일치하는 종목을 찾지 못했습니다.",
+        codeLookupLoading: "검색 중...",
         startMoney: "초기 투자금",
         monthly: "월 적립금 (선택)",
         alertInput: "종목, 시작월, 초기 투자금을 올바르게 입력하세요.",
@@ -573,6 +574,7 @@
         codeLookupButton: "Find Code",
         codeLookupEmpty: "Enter a keyword.",
         codeLookupNoResult: "No matching company found.",
+        codeLookupLoading: "Searching...",
         startMoney: "Initial investment",
         monthly: "Monthly contribution (optional)",
         alertInput: "Please enter a valid symbol, start month, and initial investment.",
@@ -734,7 +736,7 @@
       return Array.from(set);
     }
 
-    function searchSymbols(type) {
+    async function searchSymbols(type) {
       const inputEl = document.getElementById(type + "CodeSearch");
       const resultEl = document.getElementById(type + "CodeSearchResult");
       const candidates = buildLookupCandidates(inputEl.value);
@@ -743,19 +745,44 @@
         return;
       }
 
+      resultEl.textContent = t("codeLookupLoading");
       const rows = Array.isArray(mappingRowsByMarket[type]) ? mappingRowsByMarket[type] : [];
-      const matched = rows.filter((row) => {
+      const localMatched = rows.filter((row) => {
         const checks = [row.symbol, row.ko, row.en].concat(row.aliases || []).map(normalizeLookup);
         return checks.some((v) => candidates.some((q) => v.includes(q)));
       }).slice(0, 5);
 
-      if (!matched.length) {
+      const merged = new Map();
+      localMatched.forEach((row) => {
+        merged.set(row.symbol, { symbol: row.symbol, name: row.ko || row.en || row.symbol });
+      });
+
+      try {
+        const res = await fetch(`/api/symbol-search?q=${encodeURIComponent(inputEl.value.trim())}&market=${encodeURIComponent(type)}`);
+        if (res.ok) {
+          const json = await res.json();
+          const apiItems = Array.isArray(json?.items) ? json.items : [];
+          apiItems.forEach((row) => {
+            const symbol = String(row?.symbol || "").toUpperCase();
+            if (!symbol) return;
+            const known = companyLabelsBySymbol[symbol];
+            const display = known?.ko || known?.en || row.shortName || row.longName || symbol;
+            if (!merged.has(symbol)) {
+              merged.set(symbol, { symbol, name: display });
+            }
+          });
+        }
+      } catch (_e) {
+      }
+
+      const finalItems = Array.from(merged.values()).slice(0, 8);
+      if (!finalItems.length) {
         resultEl.textContent = t("codeLookupNoResult");
         return;
       }
 
-      resultEl.innerHTML = matched
-        .map((row) => `${row.ko || row.en || row.symbol} (${row.symbol})`)
+      resultEl.innerHTML = finalItems
+        .map((row) => `${row.name} (${row.symbol})`)
         .join("<br>");
     }
 
