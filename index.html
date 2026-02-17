@@ -193,7 +193,7 @@
 
   <script>
     const WORKER_URL = "https://stock-backtesting-gmc.pages.dev";
-    const API_ENDPOINTS = ["/api/chart", WORKER_URL].filter(Boolean);
+    const API_ENDPOINTS = ["/api/chart", `${WORKER_URL}/api/chart`].filter(Boolean);
     const charts = {};
 
     function showPage(id) {
@@ -216,6 +216,13 @@
           if (!res.ok) {
             const body = await res.text();
             lastError = `응답 오류(${res.status}): ${body.slice(0, 120)}`;
+            continue;
+          }
+
+          const contentType = (res.headers.get("content-type") || "").toLowerCase();
+          if (!contentType.includes("application/json")) {
+            const body = await res.text();
+            lastError = `JSON 아님: ${body.slice(0, 120)}`;
             continue;
           }
 
