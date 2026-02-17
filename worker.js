@@ -1,6 +1,7 @@
 const MAPPING_JSON_URL = "https://stock-backtesting-gmc.pages.dev/company-mappings.json";
 const MAPPING_CACHE_TTL_MS = 10 * 60 * 1000;
 const MARKET_UNIVERSE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+const DEFAULT_DATA_PROVIDER = "yahoo";
 let mappingCache = { at: 0, data: null };
 let universeCache = { at: 0, kr: null, us: null };
 
@@ -17,8 +18,10 @@ export default {
       const url = new URL(request.url);
       const symbol = (url.searchParams.get("symbol") || "").trim();
       const market = (url.searchParams.get("market") || "").toLowerCase();
+      const providerId = (url.searchParams.get("provider") || DEFAULT_DATA_PROVIDER).toLowerCase();
       const from = url.searchParams.get("from");
       const to = url.searchParams.get("to");
+      const provider = getDataProvider(providerId);
 
       if (!symbol) {
         return jsonResponse({ error: "Missing symbol" }, 400);
@@ -28,9 +31,9 @@ export default {
 
       let finalSymbol = symbol;
       if (!isTickerFormat(finalSymbol)) {
-        const resolved = await resolveSymbolByMarket(finalSymbol, market, mappings);
+        const resolved = await resolveSymbolByMarket(finalSymbol, market, mappings, provider);
         if (!resolved) {
-          const suggestions = await fetchYahooSuggestions(finalSymbol, market);
+          const suggestions = await fetchSuggestions(finalSymbol, market, provider);
           return jsonResponse({ error: "Company name not found", query: finalSymbol, market, suggestions }, 404);
         }
         finalSymbol = resolved;
@@ -39,12 +42,7 @@ export default {
       const period1 = Number(from) || 0;
       const period2 = Number(to) || Math.floor(Date.now() / 1000);
 
-      const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(finalSymbol)}?period1=${period1}&period2=${period2}&interval=1mo&events=history`;
-      const upstream = await fetch(yahooUrl, {
-        headers: {
-          "User-Agent": "Mozilla/5.0"
-        }
-      });
+      const upstream = await provider.fetchChart(finalSymbol, period1, period2);
 
       const data = await upstream.text();
       return new Response(data, {
@@ -88,7 +86,7 @@ function isTickerFormat(value) {
   return /^[A-Z][A-Z0-9.-]{0,10}$/i.test(v);
 }
 
-async function resolveSymbolByMarket(query, market, mappings) {
+async function resolveSymbolByMarket(query, market, mappings, provider) {
   const candidates = buildCandidateKeys(query);
 
   for (const key of candidates) {
@@ -110,10 +108,10 @@ async function resolveSymbolByMarket(query, market, mappings) {
     }
   }
 
-  const universeMapped = await resolveFromMarketUniverse(candidates, market);
+  const universeMapped = await resolveFromMarketUniverse(candidates, market, provider);
   if (universeMapped) return universeMapped;
 
-  const quotes = await searchYahooQuotesWithVariants(query);
+  const quotes = await searchQuotesWithVariants(query, provider);
   if (!quotes.length) return null;
 
   const filtered = quotes.filter((q) => {
@@ -143,17 +141,12 @@ async function resolveSymbolByMarket(query, market, mappings) {
   return filtered[0]?.symbol || null;
 }
 
-async function searchYahooQuotesWithVariants(rawQuery) {
+async function searchQuotesWithVariants(rawQuery, provider) {
   const variants = buildRawQueryVariants(rawQuery);
   const merged = new Map();
 
   for (const q of variants) {
-    const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=20&newsCount=0`;
-    const response = await fetch(searchUrl, {
-      headers: {
-        "User-Agent": "Mozilla/5.0"
-      }
-    });
+    const response = await provider.searchQuotes(q, 20);
     if (!response.ok) continue;
 
     const json = await response.json();
@@ -168,7 +161,7 @@ async function searchYahooQuotesWithVariants(rawQuery) {
   return Array.from(merged.values());
 }
 
-async function resolveFromMarketUniverse(candidates, market) {
+async function resolveFromMarketUniverse(candidates, market, provider) {
   if (!candidates?.length) return null;
   if (market === "kr") {
     const kr = await loadKrUniverse();
@@ -180,7 +173,7 @@ async function resolveFromMarketUniverse(candidates, market) {
     return null;
   }
   if (market === "us") {
-    const us = await loadSp500Universe();
+    const us = await loadSp500Universe(provider);
     if (!us) return null;
     for (const key of candidates) {
       const mapped = us[key];
@@ -190,12 +183,9 @@ async function resolveFromMarketUniverse(candidates, market) {
   return null;
 }
 
-async function fetchYahooSuggestions(query, market) {
+async function fetchSuggestions(query, market, provider) {
   try {
-    const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0`;
-    const response = await fetch(searchUrl, {
-      headers: { "User-Agent": "Mozilla/5.0" }
-    });
+    const response = await provider.searchQuotes(query, 10);
     if (!response.ok) return [];
     const json = await response.json();
     const quotes = Array.isArray(json?.quotes) ? json.quotes : [];
@@ -277,18 +267,14 @@ async function fetchKrMarketMap(marketType, suffix) {
   return map;
 }
 
-async function loadSp500Universe() {
+async function loadSp500Universe(provider) {
   const now = Date.now();
   if (universeCache.us && now - universeCache.at < MARKET_UNIVERSE_CACHE_TTL_MS) {
     return universeCache.us;
   }
 
   try {
-    const res = await fetch("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies", {
-      headers: {
-        "User-Agent": "Mozilla/5.0"
-      }
-    });
+    const res = await provider.fetchSp500Html();
     if (!res.ok) return universeCache.us;
     const html = await res.text();
     const map = parseSp500FromWikipedia(html);
@@ -459,6 +445,28 @@ function stripHtml(v) {
     .replace(/\s+/g, " ")
     .trim();
 }
+
+function getDataProvider(providerId) {
+  return DATA_PROVIDERS[providerId] || DATA_PROVIDERS[DEFAULT_DATA_PROVIDER];
+}
+
+const DATA_PROVIDERS = {
+  yahoo: {
+    async fetchChart(symbol, period1, period2) {
+      const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?period1=${period1}&period2=${period2}&interval=1mo&events=history`;
+      return fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+    },
+    async searchQuotes(query, quotesCount) {
+      const url = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=${quotesCount}&newsCount=0`;
+      return fetch(url, { headers: { "User-Agent": "Mozilla/5.0" } });
+    },
+    async fetchSp500Html() {
+      return fetch("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies", {
+        headers: { "User-Agent": "Mozilla/5.0" }
+      });
+    }
+  }
+};
 
 const KR_NAME_TO_SYMBOL = {
   "삼성전자": "005930.KS",
