@@ -634,7 +634,10 @@
 
         const valueText = summaryRows.map((r) => `${r.label} ${formatNumber(r.last)}`).join(" / ");
         const returnText = summaryRows.map((r) => `${r.label} ${formatPercent(r.ret)}`).join(" / ");
-        resultEl.textContent = `${t("resultPrefix")}: ${valueText} | ${t("principalPrefix")}: ${formatNumber(totalInvested)} | ${t("returnPrefix")}: ${returnText} (${t("winner")}: ${winner.label})`;
+        const principalText = `${t("principalPrefix")}: ${formatNumber(totalInvested)}`;
+        const finalValueText = `${t("resultPrefix")}: ${valueText}`;
+        const returnsText = `${t("returnPrefix")}: ${returnText} (${t("winner")}: ${winner.label})`;
+        resultEl.innerHTML = `${principalText}<br>${finalValueText}<br>${returnsText}`;
       } catch (error) {
         console.error(error);
         resultEl.textContent = "";
