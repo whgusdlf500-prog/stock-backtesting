@@ -111,16 +111,8 @@ async function resolveSymbolByMarket(query, market, mappings) {
   const universeMapped = await resolveFromMarketUniverse(candidates, market);
   if (universeMapped) return universeMapped;
 
-  const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=20&newsCount=0`;
-  const response = await fetch(searchUrl, {
-    headers: {
-      "User-Agent": "Mozilla/5.0"
-    }
-  });
-  if (!response.ok) return null;
-
-  const json = await response.json();
-  const quotes = Array.isArray(json?.quotes) ? json.quotes : [];
+  const quotes = await searchYahooQuotesWithVariants(query);
+  if (!quotes.length) return null;
 
   const filtered = quotes.filter((q) => {
     const s = (q?.symbol || "").toUpperCase();
@@ -147,6 +139,31 @@ async function resolveSymbolByMarket(query, market, mappings) {
   if (partial?.symbol) return partial.symbol;
 
   return filtered[0]?.symbol || null;
+}
+
+async function searchYahooQuotesWithVariants(rawQuery) {
+  const variants = buildRawQueryVariants(rawQuery);
+  const merged = new Map();
+
+  for (const q of variants) {
+    const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(q)}&quotesCount=20&newsCount=0`;
+    const response = await fetch(searchUrl, {
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
+    });
+    if (!response.ok) continue;
+
+    const json = await response.json();
+    const quotes = Array.isArray(json?.quotes) ? json.quotes : [];
+    for (const row of quotes) {
+      const symbol = String(row?.symbol || "").toUpperCase();
+      if (!symbol) continue;
+      if (!merged.has(symbol)) merged.set(symbol, row);
+    }
+  }
+
+  return Array.from(merged.values());
 }
 
 async function resolveFromMarketUniverse(candidates, market) {
@@ -392,6 +409,36 @@ function buildCandidateKeys(input) {
     }
   }
 
+  return Array.from(set);
+}
+
+function buildRawQueryVariants(input) {
+  const raw = String(input || "").trim();
+  if (!raw) return [];
+
+  const set = new Set([raw]);
+  const transforms = [
+    (v) => v.replace(/^주식회사/, ""),
+    (v) => v.replace(/주식회사/g, ""),
+    (v) => v.replace(/^엘지/, "LG"),
+    (v) => v.replace(/엘지/g, "LG"),
+    (v) => v.replace(/^에스케이/, "SK"),
+    (v) => v.replace(/에스케이/g, "SK"),
+    (v) => v.replace(/케이티앤지/g, "KT&G"),
+    (v) => v.replace(/앤드/g, " and "),
+    (v) => v.replace(/&/g, " and ")
+  ];
+
+  const queue = [raw];
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const fn of transforms) {
+      const next = String(fn(cur)).trim();
+      if (!next || set.has(next)) continue;
+      set.add(next);
+      queue.push(next);
+    }
+  }
   return Array.from(set);
 }
 
