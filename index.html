@@ -150,6 +150,67 @@
       color: white;
     }
 
+    .live-strip {
+      margin: 0 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px 12px;
+      background: linear-gradient(135deg, rgba(255,255,255,0.95), rgba(248,250,252,0.86));
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .live-left {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #0f172a;
+      font-weight: 700;
+    }
+
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: #22c55e;
+      box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55);
+      animation: pulse 1.4s infinite;
+    }
+
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.55); }
+      70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+    }
+
+    .live-right {
+      font-size: 13px;
+      color: #334155;
+      font-weight: 600;
+      min-height: 18px;
+    }
+
+    .mini-stats {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 0 0 14px;
+    }
+
+    .stat-pill {
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 12px;
+      font-weight: 800;
+      background: rgba(255,255,255,0.88);
+      color: #0f172a;
+    }
+
     .archive-cta {
       border: 1px solid var(--line);
       border-radius: 12px;
@@ -157,6 +218,7 @@
       padding: 12px;
       margin: 0 0 14px;
       text-align: center;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
     }
 
     .archive-cta a {
@@ -174,6 +236,16 @@
     .archive-cta a:hover {
       background: #111827;
       color: #fff;
+    }
+
+    .archive-cta:hover,
+    .lookup-card:hover,
+    .quality-card:hover,
+    .idea-card:hover,
+    .comments-card:hover,
+    .contact-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.1);
     }
 
     .market-notice {
@@ -439,6 +511,25 @@
       border-radius: 14px;
       background: linear-gradient(145deg, #ffffff, #f8fafc);
       padding: 14px;
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    .lookup-card,
+    .idea-card,
+    .comments-card,
+    .contact-card {
+      transition: transform 0.25s ease, box-shadow 0.25s ease;
+    }
+
+    [data-reveal] {
+      opacity: 0;
+      transform: translateY(14px);
+      transition: opacity 0.55s ease, transform 0.55s ease;
+    }
+
+    .in-view {
+      opacity: 1 !important;
+      transform: translateY(0) !important;
     }
 
     .quality-card h3 {
@@ -543,6 +634,8 @@
       .form-grid { grid-template-columns: 1fr; }
       .contact-grid { grid-template-columns: 1fr; }
       .quality-grid { grid-template-columns: 1fr; }
+      .live-strip { padding: 10px; }
+      .live-right { width: 100%; }
       h1 { font-size: 24px; }
       .top-row { justify-content: center; }
     }
@@ -587,7 +680,21 @@
       <button id="tab-kr" onclick="showPage('kr')">🇰🇷 <span id="tabKrText">동학개미</span></button>
     </div>
 
-    <section class="archive-cta">
+    <section class="live-strip" data-reveal>
+      <div class="live-left">
+        <span class="pulse-dot"></span>
+        <span id="liveClock">실시간 업데이트 준비중</span>
+      </div>
+      <div id="liveHint" class="live-right">장기 복리 관점에서 월 적립 시뮬레이션을 먼저 확인해 보세요.</div>
+    </section>
+
+    <div class="mini-stats" data-reveal>
+      <span class="stat-pill">KR: KOSPI + KOSDAQ</span>
+      <span class="stat-pill">US: S&amp;P500 + NASDAQ 주요 종목</span>
+      <span class="stat-pill">입력: 종목명/티커 모두 지원</span>
+    </div>
+
+    <section class="archive-cta" data-reveal>
       <strong>분석 콘텐츠 페이지</strong>
       <div>투자 해설 글과 사례 분석은 아카이브에서 확인할 수 있습니다.</div>
       <a href="/articles/">분석 아카이브 바로가기</a>
@@ -595,7 +702,7 @@
 
     <p class="market-notice">종목 검색 범위 안내: 한국은 KOSPI + KOSDAQ 상장사 검색을 지원합니다. 미국은 S&amp;P500 + NASDAQ 주요 종목 포함 검색을 지원합니다.</p>
 
-    <section id="us" class="page active">
+    <section id="us" class="page active" data-reveal>
       <h2 id="usPanelTitle" class="panel-title">S&amp;P500 비교 (USD)</h2>
       <div class="lookup-card">
         <div id="usLookupTitle" class="lookup-title">종목코드 검색</div>
@@ -623,7 +730,7 @@
       </div>
     </section>
 
-    <section id="kr" class="page">
+    <section id="kr" class="page" data-reveal>
       <h2 id="krPanelTitle" class="panel-title">KOSPI 비교 (KRW)</h2>
       <div class="lookup-card">
         <div id="krLookupTitle" class="lookup-title">종목코드 검색</div>
@@ -651,7 +758,7 @@
       </div>
     </section>
 
-    <section class="quality-card">
+    <section class="quality-card" data-reveal>
       <h3>투자 학습 허브</h3>
       <p>이 페이지는 단순 시세 조회가 아니라 장기 투자 판단을 돕는 학습용 도구입니다. 모든 수치는 과거 데이터 기반이며 미래 수익을 보장하지 않습니다.</p>
       <div class="quality-grid">
@@ -690,7 +797,7 @@
       </div>
     </section>
 
-    <section class="idea-card">
+    <section class="idea-card" data-reveal>
       <h3>장기투자 의견 남기기</h3>
       <p class="hint">의견은 공개 댓글 스레드에 남겨주세요. 다른 사용자도 함께 읽고 토론할 수 있습니다.</p>
       <p class="hint">형식 예시: 회사명 / 시장(KR, US) / 장기투자 관점(기간, 근거)</p>
@@ -699,14 +806,14 @@
       </div>
     </section>
 
-    <section class="comments-card">
+    <section class="comments-card" data-reveal>
       <h3>댓글</h3>
       <p class="hint">누락되거나 오류가 있는 회사명은 댓글로 남겨주시면 확인 후 매핑에 반영하겠습니다. 여러분의 댓글은 큰 응원이 됩니다. 추가되었으면 하는 기능이 있다면 의견을 남겨주시면 반영될 수 있도록 하겠습니다.</p>
       <div id="disqus_thread"></div>
       <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
     </section>
 
-    <section class="contact-card">
+    <section class="contact-card" data-reveal>
       <h3>제휴 문의</h3>
       <form action="https://formspree.io/f/xaqdjwzq" method="POST">
         <div class="contact-grid">
@@ -920,6 +1027,7 @@
       document.getElementById("krMoney").placeholder = t("startMoney");
       document.getElementById("usMonthly").placeholder = t("monthly");
       document.getElementById("krMonthly").placeholder = t("monthly");
+      refreshLiveHints(true);
     }
 
     function normalizeLookup(s) {
@@ -1065,6 +1173,63 @@
       document.querySelectorAll(".tabs button").forEach((btn) => btn.classList.remove("active-tab"));
       document.getElementById(id).classList.add("active");
       document.getElementById(`tab-${id}`).classList.add("active-tab");
+    }
+
+    const liveHints = {
+      ko: [
+        "장기 복리 관점에서 월 적립 시뮬레이션을 먼저 확인해 보세요.",
+        "원금/평가금/수익률을 함께 보는 습관이 중요합니다.",
+        "종목명 입력이 안 되면 종목코드 검색창으로 코드부터 확인해 보세요."
+      ],
+      en: [
+        "Start with monthly contribution simulation for long-term compounding.",
+        "Compare principal, final value, and returns together.",
+        "If name matching fails, use ticker lookup first."
+      ]
+    };
+    let hintIndex = 0;
+
+    function refreshLiveHints(force) {
+      const hintEl = document.getElementById("liveHint");
+      if (!hintEl) return;
+      if (force) hintIndex = 0;
+      const list = liveHints[currentLang] || liveHints.ko;
+      hintEl.textContent = list[hintIndex % list.length];
+      hintIndex += 1;
+    }
+
+    function initLiveClock() {
+      const el = document.getElementById("liveClock");
+      if (!el) return;
+      const tick = () => {
+        const now = new Date();
+        const locale = currentLang === "ko" ? "ko-KR" : "en-US";
+        const text = now.toLocaleString(locale, {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+          hour: "2-digit",
+          minute: "2-digit"
+        });
+        el.textContent = `${currentLang === "ko" ? "업데이트" : "Updated"}: ${text}`;
+      };
+      tick();
+      setInterval(tick, 30 * 1000);
+      setInterval(() => refreshLiveHints(false), 5 * 1000);
+    }
+
+    function initRevealAnimations() {
+      const targets = document.querySelectorAll("[data-reveal]");
+      if (!targets.length) return;
+      const io = new IntersectionObserver((entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add("in-view");
+            io.unobserve(entry.target);
+          }
+        });
+      }, { threshold: 0.12 });
+      targets.forEach((el) => io.observe(el));
     }
 
     async function fetchData(symbol, startDate, market) {
@@ -1381,6 +1546,8 @@
 
     applyLanguage();
     loadCompanyMappings();
+    initLiveClock();
+    initRevealAnimations();
   </script>
   <script>
     (function() {
