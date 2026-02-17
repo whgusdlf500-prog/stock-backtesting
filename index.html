@@ -165,7 +165,7 @@
       <div class="run-row">
         <button onclick="runBacktest('us')">백테스트 실행</button>
       </div>
-      <p class="hint">지수 비교: ^GSPC (S&P500)</p>
+      <p class="hint">지수 비교: S&amp;P500</p>
       <p id="usResult" class="result"></p>
       <div class="chart-wrap">
         <canvas id="usChart"></canvas>
@@ -183,7 +183,7 @@
       <div class="run-row">
         <button onclick="runBacktest('kr')">백테스트 실행</button>
       </div>
-      <p class="hint">지수 비교: ^KS11 (KOSPI) / 회사명 입력 가능 (예: 삼성전자, LG전자)</p>
+      <p class="hint">지수 비교: KOSPI / 회사명 입력 가능 (예: 삼성전자, LG전자)</p>
       <p id="krResult" class="result"></p>
       <div class="chart-wrap">
         <canvas id="krChart"></canvas>
@@ -225,6 +225,11 @@
     }
 
     async function runBacktest(type) {
+      if (WORKER_URL.includes("your-worker-name")) {
+        alert("WORKER_URL을 실제 Cloudflare Worker 주소로 변경하세요.");
+        return;
+      }
+
       const ticker = document.getElementById(type + "Ticker").value.trim();
       const start = document.getElementById(type + "Start").value;
       const money = parseFloat(document.getElementById(type + "Money").value);
@@ -240,8 +245,9 @@
         resultEl.textContent = "계산 중...";
 
         const stock = await fetchData(ticker, start, type);
-        const indexSymbol = type === "us" ? "^GSPC" : "^KS11";
-        const index = await fetchData(indexSymbol, start, type);
+        const indexTicker = type === "us" ? "^GSPC" : "^KS11";
+        const indexLabel = type === "us" ? "S&P500" : "KOSPI";
+        const index = await fetchData(indexTicker, start, type);
         const stockSymbol = stock?.meta?.symbol || ticker.toUpperCase();
 
         const stockPrices = stock?.indicators?.adjclose?.[0]?.adjclose || [];
@@ -301,7 +307,7 @@
                 tension: 0.2
               },
               {
-                label: indexSymbol,
+                label: indexLabel,
                 data: indexValue,
                 borderWidth: 2,
                 tension: 0.2
@@ -319,8 +325,8 @@
 
         const lastStock = stockValue[stockValue.length - 1];
         const lastIndex = indexValue[indexValue.length - 1];
-        const winner = lastStock >= lastIndex ? stockSymbol : indexSymbol;
-        resultEl.textContent = `최종 평가금: ${stockSymbol} ${toFixed2(lastStock)} / ${indexSymbol} ${toFixed2(lastIndex)} (우세: ${winner})`;
+        const winner = lastStock >= lastIndex ? stockSymbol : indexLabel;
+        resultEl.textContent = `최종 평가금: ${stockSymbol} ${toFixed2(lastStock)} / ${indexLabel} ${toFixed2(lastIndex)} (우세: ${winner})`;
       } catch (error) {
         console.error(error);
         resultEl.textContent = "";
