@@ -9,7 +9,7 @@
     :root {
       --bg-1: #00c6ff;
       --bg-2: #ffdde1;
-      --card-bg: rgba(255, 255, 255, 0.92);
+      --card-bg: rgba(255, 255, 255, 0.93);
       --text: #111827;
       --muted: #4b5563;
       --btn: #111827;
@@ -39,10 +39,38 @@
       box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
     }
 
+    .top-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 10px;
+    }
+
     h1 {
-      margin: 0 0 16px;
-      text-align: center;
+      margin: 0;
       font-size: 28px;
+    }
+
+    .lang-switch {
+      display: flex;
+      gap: 6px;
+    }
+
+    .lang-switch button {
+      border: 1px solid #d1d5db;
+      background: #fff;
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .lang-switch button.active-lang {
+      background: var(--btn);
+      color: #fff;
+      border-color: var(--btn);
     }
 
     .tabs {
@@ -125,6 +153,7 @@
       font-weight: 700;
       margin: 10px 0 8px;
       min-height: 24px;
+      line-height: 1.45;
     }
 
     .chart-wrap {
@@ -142,30 +171,37 @@
     @media (max-width: 700px) {
       .form-grid { grid-template-columns: 1fr; }
       h1 { font-size: 24px; }
+      .top-row { justify-content: center; }
     }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>개미 백테스트 PRO</h1>
+    <div class="top-row">
+      <h1 id="titleText">개미 백테스트 PRO</h1>
+      <div class="lang-switch">
+        <button id="lang-ko" class="active-lang" onclick="setLanguage('ko')">한국어</button>
+        <button id="lang-en" onclick="setLanguage('en')">English</button>
+      </div>
+    </div>
 
     <div class="tabs">
-      <button id="tab-us" class="active-tab" onclick="showPage('us')">🇺🇸 서학개미</button>
-      <button id="tab-kr" onclick="showPage('kr')">🇰🇷 동학개미</button>
+      <button id="tab-us" class="active-tab" onclick="showPage('us')">🇺🇸 <span id="tabUsText">서학개미</span></button>
+      <button id="tab-kr" onclick="showPage('kr')">🇰🇷 <span id="tabKrText">동학개미</span></button>
     </div>
 
     <section id="us" class="page active">
-      <h2 class="panel-title">S&P500 비교 (USD)</h2>
+      <h2 id="usPanelTitle" class="panel-title">S&amp;P500 비교 (USD)</h2>
       <div class="form-grid">
-        <input id="usTicker" placeholder="종목 코드 (예: AAPL)">
+        <input id="usTicker" placeholder="티커/회사명 (예: AAPL, 애플)">
         <input type="month" id="usStart">
         <input type="number" id="usMoney" placeholder="초기 투자금">
         <input type="number" id="usMonthly" placeholder="월 적립금 (선택)">
       </div>
       <div class="run-row">
-        <button onclick="runBacktest('us')">백테스트 실행</button>
+        <button id="runUsBtn" onclick="runBacktest('us')">백테스트 실행</button>
       </div>
-      <p class="hint">지수 비교: S&amp;P500</p>
+      <p id="usHint" class="hint">지수 비교: S&amp;P500 / 회사명 입력 가능 (예: 애플, 마이크로소프트)</p>
       <p id="usResult" class="result"></p>
       <div class="chart-wrap">
         <canvas id="usChart"></canvas>
@@ -173,17 +209,17 @@
     </section>
 
     <section id="kr" class="page">
-      <h2 class="panel-title">KOSPI 비교 (KRW)</h2>
+      <h2 id="krPanelTitle" class="panel-title">KOSPI 비교 (KRW)</h2>
       <div class="form-grid">
-        <input id="krTicker" placeholder="종목 코드/회사명 (예: 005930.KS 또는 삼성전자)">
+        <input id="krTicker" placeholder="종목코드/회사명 (예: 005930.KS, 삼성전자)">
         <input type="month" id="krStart">
         <input type="number" id="krMoney" placeholder="초기 투자금">
         <input type="number" id="krMonthly" placeholder="월 적립금 (선택)">
       </div>
       <div class="run-row">
-        <button onclick="runBacktest('kr')">백테스트 실행</button>
+        <button id="runKrBtn" onclick="runBacktest('kr')">백테스트 실행</button>
       </div>
-      <p class="hint">지수 비교: KOSPI / 회사명 입력 가능 (예: 삼성전자, LG전자)</p>
+      <p id="krHint" class="hint">지수 비교: KOSPI / 회사명 입력 가능 (예: 삼성전자, LG전자)</p>
       <p id="krResult" class="result"></p>
       <div class="chart-wrap">
         <canvas id="krChart"></canvas>
@@ -195,6 +231,123 @@
     const WORKER_URL = "https://stock-backtesting-gmc.pages.dev";
     const API_ENDPOINTS = ["/api/chart", `${WORKER_URL}/api/chart`].filter(Boolean);
     const charts = {};
+    const chartTimers = {};
+    let currentLang = "ko";
+
+    const I18N = {
+      ko: {
+        title: "개미 백테스트 PRO",
+        tabUs: "서학개미",
+        tabKr: "동학개미",
+        usPanel: "S&P500 비교 (USD)",
+        krPanel: "KOSPI 비교 (KRW)",
+        usHint: "지수 비교: S&P500 / 회사명 입력 가능 (예: 애플, 마이크로소프트)",
+        krHint: "지수 비교: KOSPI / 회사명 입력 가능 (예: 삼성전자, LG전자)",
+        run: "백테스트 실행",
+        usTicker: "티커/회사명 (예: AAPL, 애플)",
+        krTicker: "종목코드/회사명 (예: 005930.KS, 삼성전자)",
+        startMoney: "초기 투자금",
+        monthly: "월 적립금 (선택)",
+        alertInput: "종목, 시작월, 초기 투자금을 올바르게 입력하세요.",
+        loading: "계산 중...",
+        indexUs: "S&P500",
+        indexKr: "KOSPI",
+        winner: "우세",
+        resultPrefix: "최종 평가금",
+        returnPrefix: "수익률",
+        errorPrefix: "백테스트 중 오류가 발생했습니다"
+      },
+      en: {
+        title: "Ant Backtest PRO",
+        tabUs: "US Stocks",
+        tabKr: "Korean Stocks",
+        usPanel: "S&P500 Comparison (USD)",
+        krPanel: "KOSPI Comparison (KRW)",
+        usHint: "Benchmark: S&P500 / Korean names allowed (e.g., 애플, 마이크로소프트)",
+        krHint: "Benchmark: KOSPI / Korean names allowed (e.g., 삼성전자, LG전자)",
+        run: "Run Backtest",
+        usTicker: "Ticker/Company (e.g., AAPL, 애플)",
+        krTicker: "Ticker/Company (e.g., 005930.KS, 삼성전자)",
+        startMoney: "Initial investment",
+        monthly: "Monthly contribution (optional)",
+        alertInput: "Please enter a valid symbol, start month, and initial investment.",
+        loading: "Calculating...",
+        indexUs: "S&P500",
+        indexKr: "KOSPI",
+        winner: "Winner",
+        resultPrefix: "Final value",
+        returnPrefix: "Return",
+        errorPrefix: "Backtest failed"
+      }
+    };
+
+    const COMPANY_LABELS = {
+      "005930.KS": { ko: "삼성전자", en: "Samsung Electronics" },
+      "066570.KS": { ko: "LG전자", en: "LG Electronics" },
+      "000660.KS": { ko: "SK하이닉스", en: "SK hynix" },
+      "373220.KS": { ko: "LG에너지솔루션", en: "LG Energy Solution" },
+      "005380.KS": { ko: "현대차", en: "Hyundai Motor" },
+      "000270.KS": { ko: "기아", en: "Kia" },
+      "035420.KS": { ko: "NAVER", en: "NAVER" },
+      "035720.KS": { ko: "카카오", en: "Kakao" },
+      "005490.KS": { ko: "POSCO홀딩스", en: "POSCO Holdings" },
+      "051910.KS": { ko: "LG화학", en: "LG Chem" },
+      "006400.KS": { ko: "삼성SDI", en: "Samsung SDI" },
+      "207940.KS": { ko: "삼성바이오로직스", en: "Samsung Biologics" },
+      "068270.KS": { ko: "셀트리온", en: "Celltrion" },
+      "AAPL": { ko: "애플", en: "Apple" },
+      "MSFT": { ko: "마이크로소프트", en: "Microsoft" },
+      "NVDA": { ko: "엔비디아", en: "NVIDIA" },
+      "AMZN": { ko: "아마존", en: "Amazon" },
+      "GOOGL": { ko: "알파벳", en: "Alphabet" },
+      "META": { ko: "메타", en: "Meta" },
+      "TSLA": { ko: "테슬라", en: "Tesla" },
+      "BRK-B": { ko: "버크셔 해서웨이", en: "Berkshire Hathaway" },
+      "AVGO": { ko: "브로드컴", en: "Broadcom" },
+      "JPM": { ko: "JP모건", en: "JPMorgan Chase" },
+      "V": { ko: "비자", en: "Visa" },
+      "MA": { ko: "마스터카드", en: "Mastercard" },
+      "NFLX": { ko: "넷플릭스", en: "Netflix" },
+      "KO": { ko: "코카콜라", en: "Coca-Cola" },
+      "PEP": { ko: "펩시코", en: "PepsiCo" },
+      "WMT": { ko: "월마트", en: "Walmart" },
+      "COST": { ko: "코스트코", en: "Costco" },
+      "JNJ": { ko: "존슨앤드존슨", en: "Johnson & Johnson" },
+      "PG": { ko: "프록터앤갬블", en: "Procter & Gamble" },
+      "UNH": { ko: "유나이티드헬스", en: "UnitedHealth" },
+      "XOM": { ko: "엑슨모빌", en: "Exxon Mobil" },
+      "CVX": { ko: "셰브론", en: "Chevron" }
+    };
+
+    function t(key) {
+      return I18N[currentLang][key];
+    }
+
+    function setLanguage(lang) {
+      currentLang = lang;
+      document.documentElement.lang = lang;
+      document.getElementById("lang-ko").classList.toggle("active-lang", lang === "ko");
+      document.getElementById("lang-en").classList.toggle("active-lang", lang === "en");
+      applyLanguage();
+    }
+
+    function applyLanguage() {
+      document.getElementById("titleText").textContent = t("title");
+      document.getElementById("tabUsText").textContent = t("tabUs");
+      document.getElementById("tabKrText").textContent = t("tabKr");
+      document.getElementById("usPanelTitle").textContent = t("usPanel");
+      document.getElementById("krPanelTitle").textContent = t("krPanel");
+      document.getElementById("usHint").textContent = t("usHint");
+      document.getElementById("krHint").textContent = t("krHint");
+      document.getElementById("runUsBtn").textContent = t("run");
+      document.getElementById("runKrBtn").textContent = t("run");
+      document.getElementById("usTicker").placeholder = t("usTicker");
+      document.getElementById("krTicker").placeholder = t("krTicker");
+      document.getElementById("usMoney").placeholder = t("startMoney");
+      document.getElementById("krMoney").placeholder = t("startMoney");
+      document.getElementById("usMonthly").placeholder = t("monthly");
+      document.getElementById("krMonthly").placeholder = t("monthly");
+    }
 
     function showPage(id) {
       document.querySelectorAll(".page").forEach((page) => page.classList.remove("active"));
@@ -207,41 +360,40 @@
       const from = Math.floor(new Date(startDate + "-01").getTime() / 1000);
       const to = Math.floor(Date.now() / 1000);
       const qs = `symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}&market=${encodeURIComponent(market)}`;
-      let lastError = "API 호출 실패";
+      let lastError = "API call failed";
 
       for (const endpoint of API_ENDPOINTS) {
         const url = endpoint.includes("?") ? `${endpoint}&${qs}` : `${endpoint}?${qs}`;
+
         try {
           const res = await fetch(url);
           const body = await res.text();
+
           if (!res.ok) {
-            lastError = `응답 오류(${res.status}): ${body.slice(0, 120)}`;
+            lastError = `HTTP ${res.status}: ${body.slice(0, 120)}`;
             continue;
           }
 
           const contentType = (res.headers.get("content-type") || "").toLowerCase();
           if (!contentType.includes("application/json")) {
-            lastError = `JSON 아님: ${body.slice(0, 120)}`;
+            lastError = `Not JSON: ${body.slice(0, 120)}`;
             continue;
           }
 
           const trimmed = body.trim();
           if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) {
-            lastError = `JSON 형식 아님: ${trimmed.slice(0, 120)}`;
+            lastError = `Invalid JSON body: ${trimmed.slice(0, 120)}`;
             continue;
           }
 
-          let json;
-          try {
-            json = JSON.parse(trimmed);
-          } catch (_e) {
-            lastError = `JSON 파싱 실패: ${trimmed.slice(0, 120)}`;
-            continue;
-          }
-
+          const json = JSON.parse(trimmed);
           const result = json?.chart?.result?.[0];
-          if (result) return result;
-          lastError = "유효한 차트 데이터 없음";
+          if (!result) {
+            lastError = "No chart result";
+            continue;
+          }
+
+          return result;
         } catch (error) {
           lastError = String(error);
         }
@@ -250,8 +402,82 @@
       throw new Error(lastError);
     }
 
-    function toFixed2(value) {
-      return Number(value).toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+    function getDisplayName(symbol, market, fallbackName) {
+      const key = String(symbol || "").toUpperCase();
+      const mapped = COMPANY_LABELS[key];
+      if (mapped) {
+        return currentLang === "ko" ? mapped.ko : mapped.en;
+      }
+      if (currentLang === "en" && fallbackName) return fallbackName;
+      if (currentLang === "ko" && market === "kr" && fallbackName && /[가-힣]/.test(fallbackName)) return fallbackName;
+      return symbol;
+    }
+
+    function formatNumber(value) {
+      return Number(value).toLocaleString(currentLang === "ko" ? "ko-KR" : "en-US", {
+        maximumFractionDigits: 2
+      });
+    }
+
+    function formatPercent(value) {
+      return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
+    }
+
+    function animateChart(type, labels, stockSeries, indexSeries, stockLabel, indexLabel) {
+      if (chartTimers[type]) {
+        clearInterval(chartTimers[type]);
+      }
+      if (charts[type]) {
+        charts[type].destroy();
+      }
+
+      const ctx = document.getElementById(type + "Chart");
+      const chart = new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: stockLabel,
+              data: [],
+              borderWidth: 2,
+              tension: 0.2
+            },
+            {
+              label: indexLabel,
+              data: [],
+              borderWidth: 2,
+              tension: 0.2
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: true,
+          animation: false,
+          plugins: {
+            legend: { position: "bottom" }
+          }
+        }
+      });
+
+      charts[type] = chart;
+
+      const total = labels.length;
+      const ms = Math.max(40, Math.min(180, Math.floor(7000 / Math.max(total, 1))));
+      let i = 0;
+
+      chartTimers[type] = setInterval(() => {
+        chart.data.labels.push(labels[i]);
+        chart.data.datasets[0].data.push(stockSeries[i]);
+        chart.data.datasets[1].data.push(indexSeries[i]);
+        chart.update("none");
+
+        i += 1;
+        if (i >= total) {
+          clearInterval(chartTimers[type]);
+        }
+      }, ms);
     }
 
     async function runBacktest(type) {
@@ -262,28 +488,30 @@
       const resultEl = document.getElementById(type + "Result");
 
       if (!ticker || !start || !money || money <= 0) {
-        alert("종목, 시작월, 초기 투자금을 올바르게 입력하세요.");
+        alert(t("alertInput"));
         return;
       }
 
       try {
-        resultEl.textContent = "계산 중...";
+        resultEl.textContent = t("loading");
 
         const stock = await fetchData(ticker, start, type);
         const indexTicker = type === "us" ? "^GSPC" : "^KS11";
-        const indexLabel = type === "us" ? "S&P500" : "KOSPI";
+        const indexLabel = type === "us" ? t("indexUs") : t("indexKr");
         const index = await fetchData(indexTicker, start, type);
-        const stockSymbol = stock?.meta?.symbol || ticker.toUpperCase();
 
         const stockPrices = stock?.indicators?.adjclose?.[0]?.adjclose || [];
         const indexPrices = index?.indicators?.adjclose?.[0]?.adjclose || [];
         const stockTs = stock?.timestamp || [];
         const indexTs = index?.timestamp || [];
 
+        const stockSymbol = stock?.meta?.symbol || ticker.toUpperCase();
+        const stockName = getDisplayName(stockSymbol, type, stock?.meta?.longName || stock?.meta?.shortName);
+
         const indexMap = new Map();
-        indexTs.forEach((t, i) => {
+        indexTs.forEach((ts, i) => {
           const p = indexPrices[i];
-          if (p != null) indexMap.set(t, p);
+          if (p != null) indexMap.set(ts, p);
         });
 
         let shares = 0;
@@ -301,63 +529,44 @@
             shares += money / p;
             indexShares += money / ip;
           }
+
           if (monthly > 0) {
             shares += monthly / p;
             indexShares += monthly / ip;
           }
 
-          labels.push(new Date(ts * 1000).toLocaleDateString("ko-KR"));
+          labels.push(new Date(ts * 1000).toLocaleDateString(currentLang === "ko" ? "ko-KR" : "en-US"));
           stockValue.push(shares * p);
           indexValue.push(indexShares * ip);
         });
 
-        if (labels.length === 0) {
-          throw new Error("겹치는 기간 데이터가 없습니다.");
+        if (!labels.length) {
+          throw new Error(currentLang === "ko" ? "겹치는 기간 데이터가 없습니다." : "No overlapping data for selected period.");
         }
 
-        if (charts[type]) {
-          charts[type].destroy();
-        }
-
-        const ctx = document.getElementById(type + "Chart");
-        charts[type] = new Chart(ctx, {
-          type: "line",
-          data: {
-            labels,
-            datasets: [
-              {
-                label: stockSymbol,
-                data: stockValue,
-                borderWidth: 2,
-                tension: 0.2
-              },
-              {
-                label: indexLabel,
-                data: indexValue,
-                borderWidth: 2,
-                tension: 0.2
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            plugins: {
-              legend: { position: "bottom" }
-            }
-          }
-        });
+        animateChart(type, labels, stockValue, indexValue, stockName, indexLabel);
 
         const lastStock = stockValue[stockValue.length - 1];
         const lastIndex = indexValue[indexValue.length - 1];
-        const winner = lastStock >= lastIndex ? stockSymbol : indexLabel;
-        resultEl.textContent = `최종 평가금: ${stockSymbol} ${toFixed2(lastStock)} / ${indexLabel} ${toFixed2(lastIndex)} (우세: ${winner})`;
+        const totalInvested = money + monthly * labels.length;
+        const stockReturn = ((lastStock - totalInvested) / totalInvested) * 100;
+        const indexReturn = ((lastIndex - totalInvested) / totalInvested) * 100;
+
+        const winnerName = lastStock >= lastIndex ? stockName : indexLabel;
+
+        if (currentLang === "ko") {
+          resultEl.textContent = `${t("resultPrefix")}: ${stockName} ${formatNumber(lastStock)} / ${indexLabel} ${formatNumber(lastIndex)} | ${t("returnPrefix")}: ${stockName} ${formatPercent(stockReturn)} / ${indexLabel} ${formatPercent(indexReturn)} (${t("winner")}: ${winnerName})`;
+        } else {
+          resultEl.textContent = `${t("resultPrefix")}: ${stockName} ${formatNumber(lastStock)} / ${indexLabel} ${formatNumber(lastIndex)} | ${t("returnPrefix")}: ${stockName} ${formatPercent(stockReturn)} / ${indexLabel} ${formatPercent(indexReturn)} (${t("winner")}: ${winnerName})`;
+        }
       } catch (error) {
         console.error(error);
         resultEl.textContent = "";
-        alert(`백테스트 중 오류가 발생했습니다: ${error.message}`);
+        alert(`${t("errorPrefix")}: ${error.message}`);
       }
     }
+
+    applyLanguage();
   </script>
 </body>
 </html>
