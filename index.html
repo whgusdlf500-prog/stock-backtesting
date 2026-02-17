@@ -285,6 +285,60 @@
       text-align: center;
     }
 
+    .idea-card {
+      margin-top: 22px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      padding: 14px;
+    }
+
+    .idea-card h3 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      text-align: center;
+    }
+
+    .idea-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .idea-grid input,
+    .idea-grid select,
+    .idea-card textarea {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      background: #ffffff;
+      color: #111827;
+    }
+
+    .idea-card textarea {
+      min-height: 110px;
+      resize: vertical;
+      margin-bottom: 10px;
+    }
+
+    .idea-submit {
+      display: flex;
+      justify-content: center;
+    }
+
+    .idea-submit button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      background: var(--btn);
+      color: #fff;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
     .lookup-card {
       margin: 12px 0 14px;
       border: 1px solid var(--line);
@@ -391,6 +445,7 @@
     @media (max-width: 700px) {
       .form-grid { grid-template-columns: 1fr; }
       .contact-grid { grid-template-columns: 1fr; }
+      .idea-grid { grid-template-columns: 1fr; }
       .quality-grid { grid-template-columns: 1fr; }
       h1 { font-size: 24px; }
       .top-row { justify-content: center; }
@@ -524,6 +579,29 @@
         <input type="hidden" name="_subject" value="개미 백테스트 제휴 문의">
         <div class="contact-submit">
           <button type="submit">문의 보내기</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="idea-card">
+      <h3>장기투자 의견 남기기</h3>
+      <p class="hint">장기투자 대상으로 생각하는 회사를 추천해 주세요. 좋은 의견은 분석 콘텐츠에 반영하겠습니다.</p>
+      <form action="https://formspree.io/f/xaqdjwzq" method="POST">
+        <div class="idea-grid">
+          <input type="text" name="idea_company" placeholder="회사명 (예: 삼성전자, Apple)" required>
+          <input type="text" name="idea_symbol" placeholder="종목코드 (선택)">
+          <select name="idea_market" required>
+            <option value="">시장 선택</option>
+            <option value="KR">한국</option>
+            <option value="US">미국</option>
+            <option value="OTHER">기타</option>
+          </select>
+          <input type="text" name="idea_period" placeholder="투자 관점 기간 (예: 5년+)">
+        </div>
+        <textarea name="idea_reason" placeholder="장기투자 대상으로 보는 이유를 남겨주세요." required></textarea>
+        <input type="hidden" name="_subject" value="장기투자 의견 제안">
+        <div class="idea-submit">
+          <button type="submit">의견 보내기</button>
         </div>
       </form>
     </section>
