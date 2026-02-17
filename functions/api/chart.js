@@ -77,6 +77,9 @@ function isKoreanNameInput(value) {
 }
 
 async function resolveKoreanSymbol(query) {
+  const mapped = KOREAN_NAME_TO_SYMBOL[normalizeName(query)];
+  if (mapped) return mapped;
+
   const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=20&newsCount=0`;
   const response = await fetch(searchUrl, {
     headers: {
@@ -109,5 +112,29 @@ async function resolveKoreanSymbol(query) {
 }
 
 function normalizeName(v) {
-  return String(v).toLowerCase().replace(/\s+/g, "");
+  return String(v)
+    .toLowerCase()
+    .replace(/\s+/g, "")
+    .replace(/[^0-9a-z\u3131-\u318e\uac00-\ud7a3]/g, "");
 }
+
+const KOREAN_NAME_TO_SYMBOL = {
+  "삼성전자": "005930.KS",
+  "삼성전자우": "005935.KS",
+  "lg전자": "066570.KS",
+  "엘지전자": "066570.KS",
+  "sk하이닉스": "000660.KS",
+  "현대차": "005380.KS",
+  "기아": "000270.KS",
+  "naver": "035420.KS",
+  "카카오": "035720.KS",
+  "셀트리온": "068270.KS",
+  "posco홀딩스": "005490.KS",
+  "포스코홀딩스": "005490.KS",
+  "kb금융": "105560.KS",
+  "신한지주": "055550.KS",
+  "삼성바이오로직스": "207940.KS",
+  "삼성sdi": "006400.KS",
+  "lg화학": "051910.KS",
+  "한화에어로스페이스": "012450.KS"
+};
