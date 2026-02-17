@@ -96,6 +96,32 @@
       color: white;
     }
 
+    .archive-cta {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #ffffff;
+      padding: 12px;
+      margin: 0 0 14px;
+      text-align: center;
+    }
+
+    .archive-cta a {
+      display: inline-block;
+      margin-top: 6px;
+      text-decoration: none;
+      font-weight: 800;
+      color: #111827;
+      border: 1px solid #111827;
+      border-radius: 999px;
+      padding: 8px 14px;
+      background: #f9fafb;
+    }
+
+    .archive-cta a:hover {
+      background: #111827;
+      color: #fff;
+    }
+
     .page { display: none; }
     .page.active { display: block; }
 
@@ -385,6 +411,12 @@
       <button id="tab-us" class="active-tab" onclick="showPage('us')">🇺🇸 <span id="tabUsText">서학개미</span></button>
       <button id="tab-kr" onclick="showPage('kr')">🇰🇷 <span id="tabKrText">동학개미</span></button>
     </div>
+
+    <section class="archive-cta">
+      <strong>분석 콘텐츠 페이지</strong>
+      <div>투자 해설 글과 사례 분석은 아카이브에서 확인할 수 있습니다.</div>
+      <a href="/articles/">분석 아카이브 바로가기</a>
+    </section>
 
     <section id="us" class="page active">
       <h2 id="usPanelTitle" class="panel-title">S&amp;P500 비교 (USD)</h2>
