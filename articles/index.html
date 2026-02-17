@@ -18,22 +18,56 @@
 <body>
   <p><a href="/">← 메인으로 돌아가기</a></p>
   <h1>분석 아카이브</h1>
-  <p class="meta">최종 업데이트: 2026-02-17</p>
+  <p class="meta">articles 폴더에 새 HTML 글 파일을 추가하면 이 목록에 자동 반영됩니다.</p>
 
-  <div class="card">
-    <h2><a href="/articles/kospi-samsung-vs-index-guide.html">삼성전자 vs KOSPI 장기 적립 비교</a></h2>
-    <p>국내 대표 종목과 지수를 장기 적립 관점에서 해석하는 가이드.</p>
-  </div>
-
-  <div class="card">
-    <h2><a href="/articles/sp500-bigtech-comparison-guide.html">S&amp;P500 vs 빅테크 3종 비교 가이드</a></h2>
-    <p>애플/엔비디아/알파벳과 S&amp;P500의 비교 결과를 읽는 방법 정리.</p>
-  </div>
+  <div id="articleList"></div>
 
   <div class="card">
     <h2><a href="/articles/article-template.html">분석 글 템플릿</a></h2>
     <p>새 글 작성 시 이 템플릿을 복사해 제목/수치/해석만 채우면 됩니다.</p>
     <p class="meta">사용 팁: <code>articles/article-template.html</code> 복사 후 파일명을 변경하세요.</p>
   </div>
+
+  <script>
+    async function loadArticles() {
+      const listEl = document.getElementById("articleList");
+      listEl.innerHTML = '<p class="meta">목록 불러오는 중...</p>';
+
+      try {
+        const res = await fetch('/api/articles');
+        if (!res.ok) throw new Error('API error');
+
+        const json = await res.json();
+        const items = Array.isArray(json?.items) ? json.items : [];
+
+        if (!items.length) {
+          listEl.innerHTML = '<div class="card"><h2>아직 게시된 분석 글이 없습니다.</h2><p>첫 번째 분석 글을 추가해보세요.</p></div>';
+          return;
+        }
+
+        listEl.innerHTML = items
+          .map((item) => `
+            <div class="card">
+              <h2><a href="${item.path}">${escapeHtml(item.title)}</a></h2>
+              <p>${escapeHtml(item.description)}</p>
+            </div>
+          `)
+          .join('');
+      } catch (e) {
+        listEl.innerHTML = '<div class="card"><h2>목록을 불러오지 못했습니다.</h2><p>/api/articles 응답을 확인해 주세요.</p></div>';
+      }
+    }
+
+    function escapeHtml(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    loadArticles();
+  </script>
 </body>
 </html>
