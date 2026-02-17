@@ -230,9 +230,11 @@
   <script>
     const WORKER_URL = "https://stock-backtesting-gmc.pages.dev";
     const API_ENDPOINTS = ["/api/chart", `${WORKER_URL}/api/chart`].filter(Boolean);
+    const MAPPING_JSON_URL = "/company-mappings.json";
     const charts = {};
     const chartTimers = {};
     let currentLang = "ko";
+    let companyLabelsBySymbol = {};
 
     const I18N = {
       ko: {
@@ -319,6 +321,30 @@
       "CVX": { ko: "셰브론", en: "Chevron" }
     };
 
+    async function loadCompanyMappings() {
+      try {
+        const res = await fetch(MAPPING_JSON_URL, { cache: "no-store" });
+        if (!res.ok) return;
+        const json = await res.json();
+        const markets = json?.markets || {};
+        const next = {};
+        for (const marketKey of ["kr", "us"]) {
+          const list = Array.isArray(markets[marketKey]) ? markets[marketKey] : [];
+          list.forEach((row) => {
+            const symbol = String(row?.symbol || "").toUpperCase();
+            if (!symbol) return;
+            next[symbol] = {
+              ko: row?.ko || row?.en || symbol,
+              en: row?.en || row?.ko || symbol
+            };
+          });
+        }
+        companyLabelsBySymbol = next;
+      } catch (e) {
+        console.warn("mapping load failed", e);
+      }
+    }
+
     function t(key) {
       return I18N[currentLang][key];
     }
@@ -404,6 +430,10 @@
 
     function getDisplayName(symbol, market, fallbackName) {
       const key = String(symbol || "").toUpperCase();
+      const dynamic = companyLabelsBySymbol[key];
+      if (dynamic) {
+        return currentLang === "ko" ? dynamic.ko : dynamic.en;
+      }
       const mapped = COMPANY_LABELS[key];
       if (mapped) {
         return currentLang === "ko" ? mapped.ko : mapped.en;
@@ -567,6 +597,7 @@
     }
 
     applyLanguage();
+    loadCompanyMappings();
   </script>
 </body>
 </html>
