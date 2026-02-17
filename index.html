@@ -213,20 +213,32 @@
         const url = endpoint.includes("?") ? `${endpoint}&${qs}` : `${endpoint}?${qs}`;
         try {
           const res = await fetch(url);
+          const body = await res.text();
           if (!res.ok) {
-            const body = await res.text();
             lastError = `응답 오류(${res.status}): ${body.slice(0, 120)}`;
             continue;
           }
 
           const contentType = (res.headers.get("content-type") || "").toLowerCase();
           if (!contentType.includes("application/json")) {
-            const body = await res.text();
             lastError = `JSON 아님: ${body.slice(0, 120)}`;
             continue;
           }
 
-          const json = await res.json();
+          const trimmed = body.trim();
+          if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) {
+            lastError = `JSON 형식 아님: ${trimmed.slice(0, 120)}`;
+            continue;
+          }
+
+          let json;
+          try {
+            json = JSON.parse(trimmed);
+          } catch (_e) {
+            lastError = `JSON 파싱 실패: ${trimmed.slice(0, 120)}`;
+            continue;
+          }
+
           const result = json?.chart?.result?.[0];
           if (result) return result;
           lastError = "유효한 차트 데이터 없음";
