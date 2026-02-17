@@ -156,6 +156,35 @@
       line-height: 1.45;
     }
 
+    .result-line {
+      margin: 4px 0;
+    }
+
+    .winner-highlight {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 999px;
+      background: #111827;
+      color: #fff;
+      animation: popPulse 1.2s ease-in-out infinite;
+    }
+
+    .ret-up {
+      color: #047857;
+      font-weight: 800;
+    }
+
+    .ret-down {
+      color: #b91c1c;
+      font-weight: 800;
+    }
+
+    @keyframes popPulse {
+      0% { transform: scale(1); opacity: 0.88; }
+      50% { transform: scale(1.08); opacity: 1; }
+      100% { transform: scale(1); opacity: 0.88; }
+    }
+
     .chart-wrap {
       border: 1px solid var(--line);
       border-radius: 14px;
@@ -816,6 +845,49 @@
       return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
     }
 
+    function easeOutCubic(t) {
+      return 1 - Math.pow(1 - t, 3);
+    }
+
+    function animateNumber(from, to, durationMs, onUpdate, onDone) {
+      const start = performance.now();
+      function frame(now) {
+        const p = Math.min(1, (now - start) / durationMs);
+        const eased = easeOutCubic(p);
+        onUpdate(from + (to - from) * eased);
+        if (p < 1) {
+          requestAnimationFrame(frame);
+        } else if (onDone) {
+          onDone();
+        }
+      }
+      requestAnimationFrame(frame);
+    }
+
+    function renderResultAnimated(resultEl, type, totalInvested, summaryRows, winnerLabel) {
+      const principalText = `${t("principalPrefix")}: ${formatFinalValue(totalInvested, type)}`;
+      const valueText = summaryRows.map((r) => `${r.label} ${formatFinalValue(r.last, type)}`).join(" / ");
+      const lines = [
+        `<div class="result-line">${principalText}</div>`,
+        `<div class="result-line">${t("resultPrefix")}: ${valueText}</div>`,
+        `<div id="retLine" class="result-line">${t("returnPrefix")}: ...</div>`
+      ];
+      resultEl.innerHTML = lines.join("");
+
+      const retLine = resultEl.querySelector("#retLine");
+      const from = summaryRows.map(() => 0);
+      const to = summaryRows.map((r) => r.ret);
+
+      animateNumber(0, 1, 1300, (progress) => {
+        const nowVals = to.map((v, i) => from[i] + (v - from[i]) * progress);
+        const retText = nowVals.map((v, idx) => {
+          const cls = v >= 0 ? "ret-up" : "ret-down";
+          return `${summaryRows[idx].label} <span class="${cls}">${formatPercent(v)}</span>`;
+        }).join(" / ");
+        retLine.innerHTML = `${t("returnPrefix")}: ${retText} (${t("winner")}: <span class="winner-highlight">${winnerLabel}</span>)`;
+      });
+    }
+
     function animateChart(type, labels, datasetsInput) {
       if (chartTimers[type]) {
         clearInterval(chartTimers[type]);
@@ -981,12 +1053,7 @@
           if (r.last > winner.last) winner = r;
         });
 
-        const valueText = summaryRows.map((r) => `${r.label} ${formatFinalValue(r.last, type)}`).join(" / ");
-        const returnText = summaryRows.map((r) => `${r.label} ${formatPercent(r.ret)}`).join(" / ");
-        const principalText = `${t("principalPrefix")}: ${formatNumber(totalInvested)}`;
-        const finalValueText = `${t("resultPrefix")}: ${valueText}`;
-        const returnsText = `${t("returnPrefix")}: ${returnText} (${t("winner")}: ${winner.label})`;
-        resultEl.innerHTML = `${principalText}<br>${finalValueText}<br>${returnsText}`;
+        renderResultAnimated(resultEl, type, totalInvested, summaryRows, winner.label);
       } catch (error) {
         console.error(error);
         resultEl.textContent = "";
