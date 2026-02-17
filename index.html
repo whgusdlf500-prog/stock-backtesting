@@ -230,6 +230,46 @@
       text-align: center;
     }
 
+    .lookup-card {
+      margin: 12px 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: #fff;
+      padding: 10px;
+    }
+
+    .lookup-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+
+    .lookup-row input {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 9px 11px;
+      font-size: 14px;
+    }
+
+    .lookup-row button {
+      border: none;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-weight: 700;
+      background: #111827;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .lookup-result {
+      font-size: 13px;
+      color: #374151;
+      line-height: 1.5;
+      min-height: 19px;
+    }
+
     .quality-card {
       margin-top: 22px;
       border: 1px solid var(--line);
@@ -312,6 +352,13 @@
 
     <section id="us" class="page active">
       <h2 id="usPanelTitle" class="panel-title">S&amp;P500 비교 (USD)</h2>
+      <div class="lookup-card">
+        <div class="lookup-row">
+          <input id="usCodeSearch" placeholder="종목코드 검색 (예: 애플, NVIDIA)">
+          <button id="usCodeSearchBtn" type="button" onclick="searchSymbols('us')">코드 찾기</button>
+        </div>
+        <div id="usCodeSearchResult" class="lookup-result"></div>
+      </div>
       <div class="form-grid">
         <input id="usTicker" placeholder="티커/회사명 (예: AAPL, 애플)">
         <input id="usCompare1" placeholder="비교 회사 1 (선택)">
@@ -332,6 +379,13 @@
 
     <section id="kr" class="page">
       <h2 id="krPanelTitle" class="panel-title">KOSPI 비교 (KRW)</h2>
+      <div class="lookup-card">
+        <div class="lookup-row">
+          <input id="krCodeSearch" placeholder="종목코드 검색 (예: 삼성전자, 에코프로비엠)">
+          <button id="krCodeSearchBtn" type="button" onclick="searchSymbols('kr')">코드 찾기</button>
+        </div>
+        <div id="krCodeSearchResult" class="lookup-result"></div>
+      </div>
       <div class="form-grid">
         <input id="krTicker" placeholder="종목코드/회사명 (예: 005930.KS, 삼성전자)">
         <input id="krCompare1" placeholder="비교 회사 1 (선택)">
@@ -428,6 +482,7 @@
     const chartTimers = {};
     let currentLang = "ko";
     let companyLabelsBySymbol = {};
+    let mappingRowsByMarket = { kr: [], us: [] };
 
     const I18N = {
       ko: {
@@ -443,6 +498,11 @@
         krTicker: "종목코드/회사명 (예: 005930.KS, 삼성전자)",
         compare1: "비교 회사 1 (선택)",
         compare2: "비교 회사 2 (선택)",
+        codeLookupPlaceholderUs: "종목코드 검색 (예: 애플, NVIDIA)",
+        codeLookupPlaceholderKr: "종목코드 검색 (예: 삼성전자, 에코프로비엠)",
+        codeLookupButton: "코드 찾기",
+        codeLookupEmpty: "검색어를 입력하세요.",
+        codeLookupNoResult: "일치하는 종목을 찾지 못했습니다.",
         startMoney: "초기 투자금",
         monthly: "월 적립금 (선택)",
         alertInput: "종목, 시작월, 초기 투자금을 올바르게 입력하세요.",
@@ -468,6 +528,11 @@
         krTicker: "Ticker/Company (e.g., 005930.KS, 삼성전자)",
         compare1: "Compare company 1 (optional)",
         compare2: "Compare company 2 (optional)",
+        codeLookupPlaceholderUs: "Find ticker (e.g., Apple, NVIDIA)",
+        codeLookupPlaceholderKr: "Find ticker (e.g., 삼성전자, 에코프로비엠)",
+        codeLookupButton: "Find Code",
+        codeLookupEmpty: "Enter a keyword.",
+        codeLookupNoResult: "No matching company found.",
         startMoney: "Initial investment",
         monthly: "Monthly contribution (optional)",
         alertInput: "Please enter a valid symbol, start month, and initial investment.",
@@ -527,17 +592,25 @@
         const json = await res.json();
         const markets = json?.markets || {};
         const next = {};
+        const rows = { kr: [], us: [] };
         for (const marketKey of ["kr", "us"]) {
           const list = Array.isArray(markets[marketKey]) ? markets[marketKey] : [];
           list.forEach((row) => {
             const symbol = String(row?.symbol || "").toUpperCase();
             if (!symbol) return;
+            rows[marketKey].push({
+              symbol,
+              ko: String(row?.ko || ""),
+              en: String(row?.en || ""),
+              aliases: Array.isArray(row?.aliases) ? row.aliases.map((a) => String(a || "")) : []
+            });
             next[symbol] = {
               ko: row?.ko || row?.en || symbol,
               en: row?.en || row?.ko || symbol
             };
           });
         }
+        mappingRowsByMarket = rows;
         companyLabelsBySymbol = next;
       } catch (e) {
         console.warn("mapping load failed", e);
@@ -572,10 +645,46 @@
       document.getElementById("krTicker").placeholder = t("krTicker");
       document.getElementById("krCompare1").placeholder = t("compare1");
       document.getElementById("krCompare2").placeholder = t("compare2");
+      document.getElementById("usCodeSearch").placeholder = t("codeLookupPlaceholderUs");
+      document.getElementById("krCodeSearch").placeholder = t("codeLookupPlaceholderKr");
+      document.getElementById("usCodeSearchBtn").textContent = t("codeLookupButton");
+      document.getElementById("krCodeSearchBtn").textContent = t("codeLookupButton");
       document.getElementById("usMoney").placeholder = t("startMoney");
       document.getElementById("krMoney").placeholder = t("startMoney");
       document.getElementById("usMonthly").placeholder = t("monthly");
       document.getElementById("krMonthly").placeholder = t("monthly");
+    }
+
+    function normalizeLookup(s) {
+      return String(s || "")
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/[^0-9a-z\u3131-\u318e\uac00-\ud7a3&.-]/g, "");
+    }
+
+    function searchSymbols(type) {
+      const inputEl = document.getElementById(type + "CodeSearch");
+      const resultEl = document.getElementById(type + "CodeSearchResult");
+      const q = normalizeLookup(inputEl.value);
+      if (!q) {
+        resultEl.textContent = t("codeLookupEmpty");
+        return;
+      }
+
+      const rows = Array.isArray(mappingRowsByMarket[type]) ? mappingRowsByMarket[type] : [];
+      const matched = rows.filter((row) => {
+        const checks = [row.symbol, row.ko, row.en].concat(row.aliases || []).map(normalizeLookup);
+        return checks.some((v) => v.includes(q));
+      }).slice(0, 5);
+
+      if (!matched.length) {
+        resultEl.textContent = t("codeLookupNoResult");
+        return;
+      }
+
+      resultEl.innerHTML = matched
+        .map((row) => `${row.ko || row.en || row.symbol} (${row.symbol})`)
+        .join("<br>");
     }
 
     function showPage(id) {
