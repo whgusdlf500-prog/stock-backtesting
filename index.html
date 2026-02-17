@@ -505,6 +505,54 @@
       min-height: 19px;
     }
 
+    .csv-card {
+      margin: 0 0 14px;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: linear-gradient(145deg, #ffffff, #f8fafc);
+      padding: 10px;
+    }
+
+    .csv-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #111827;
+      margin: 0 0 8px;
+    }
+
+    .csv-row {
+      display: grid;
+      grid-template-columns: 1fr auto auto auto;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .csv-row input[type="file"] {
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 7px;
+      background: #fff;
+      width: 100%;
+    }
+
+    .csv-row button {
+      border: none;
+      border-radius: 10px;
+      padding: 9px 12px;
+      font-weight: 700;
+      background: #111827;
+      color: #fff;
+      cursor: pointer;
+    }
+
+    .csv-status {
+      font-size: 13px;
+      color: #334155;
+      line-height: 1.5;
+      min-height: 19px;
+      margin-top: 8px;
+    }
+
     .quality-card {
       margin-top: 22px;
       border: 1px solid var(--line);
@@ -706,6 +754,16 @@
         </div>
         <div id="usCodeSearchResult" class="lookup-result"></div>
       </div>
+      <div class="csv-card">
+        <div id="usCsvTitle" class="csv-title">CSV 데이터 업로드 (브라우저 캐시 저장)</div>
+        <div class="csv-row">
+          <input id="usCsvFile" type="file" accept=".csv,text/csv">
+          <button id="usCsvLoadBtn" type="button" onclick="loadCsvData('us')">업로드</button>
+          <button id="usCsvTemplateBtn" type="button" onclick="downloadCsvTemplate('us')">템플릿</button>
+          <button id="usCsvClearBtn" type="button" onclick="clearCsvData('us')">삭제</button>
+        </div>
+        <div id="usCsvStatus" class="csv-status"></div>
+      </div>
       <div class="form-grid">
         <input id="usTicker" placeholder="티커/회사명 (예: AAPL, 애플)">
         <input id="usCompare1" placeholder="비교 회사 1 (선택)">
@@ -733,6 +791,16 @@
           <button id="krCodeSearchBtn" type="button" onclick="searchSymbols('kr')">코드 찾기</button>
         </div>
         <div id="krCodeSearchResult" class="lookup-result"></div>
+      </div>
+      <div class="csv-card">
+        <div id="krCsvTitle" class="csv-title">CSV 데이터 업로드 (브라우저 캐시 저장)</div>
+        <div class="csv-row">
+          <input id="krCsvFile" type="file" accept=".csv,text/csv">
+          <button id="krCsvLoadBtn" type="button" onclick="loadCsvData('kr')">업로드</button>
+          <button id="krCsvTemplateBtn" type="button" onclick="downloadCsvTemplate('kr')">템플릿</button>
+          <button id="krCsvClearBtn" type="button" onclick="clearCsvData('kr')">삭제</button>
+        </div>
+        <div id="krCsvStatus" class="csv-status"></div>
       </div>
       <div class="form-grid">
         <input id="krTicker" placeholder="종목코드/회사명 (예: 005930.KS, 삼성전자)">
@@ -767,8 +835,8 @@
         <article class="quality-box">
           <h4>데이터 산출 기준</h4>
           <ul>
-            <li>데이터 출처: Yahoo Finance 공개 시세 API</li>
-            <li>주기: 월 단위(adjclose 기준)</li>
+            <li>데이터 출처: 사용자 업로드 CSV (브라우저 로컬 저장)</li>
+            <li>주기: CSV에 포함된 월/일 데이터 기준</li>
             <li>한국 지수 비교: KOSPI, 미국 지수 비교: S&amp;P500</li>
           </ul>
         </article>
@@ -835,16 +903,15 @@
   </div>
 
   <script>
-    const WORKER_URL = "https://stock-backtesting-gmc.pages.dev";
-    const API_ENDPOINTS = ["/api/chart", `${WORKER_URL}/api/chart`].filter(Boolean);
     const MAPPING_JSON_URL = "/company-mappings.json";
     const MISSING_MAPPING_STORAGE_KEY = "pendingMappingLogsV1";
-    const FORMSPREE_ENDPOINT = "https://formspree.io/f/xaqdjwzq";
+    const CSV_CACHE_PREFIX = "localPriceSnapshotsV1:";
     const charts = {};
     const chartTimers = {};
     let currentLang = "ko";
     let companyLabelsBySymbol = {};
     let mappingRowsByMarket = { kr: [], us: [] };
+    let marketDataStore = { kr: {}, us: {} };
     const missingLogSeen = new Set();
 
     const I18N = {
@@ -868,6 +935,17 @@
         codeLookupEmpty: "검색어를 입력하세요.",
         codeLookupNoResult: "일치하는 종목을 찾지 못했습니다.",
         codeLookupLoading: "검색 중...",
+        csvTitle: "CSV 데이터 업로드 (브라우저 캐시 저장)",
+        csvLoad: "업로드",
+        csvTemplate: "템플릿",
+        csvClear: "삭제",
+        csvNeedFile: "CSV 파일을 선택하세요.",
+        csvLoaded: "CSV 로딩 완료",
+        csvCleared: "저장된 CSV 데이터를 삭제했습니다.",
+        csvInvalid: "CSV 형식이 올바르지 않습니다. 필수 컬럼: date,symbol,adjclose(또는 close).",
+        csvMissing: "CSV 데이터가 없습니다. 먼저 업로드하세요.",
+        csvHintUs: "예시: date,symbol,adjclose / 지수 심볼: ^GSPC 또는 S&P500 (템플릿은 빈 형식만 제공)",
+        csvHintKr: "예시: date,symbol,adjclose / 지수 심볼: ^KS11 또는 KOSPI (템플릿은 빈 형식만 제공)",
         startMoney: "초기 투자금",
         monthly: "월 적립금 (선택)",
         alertInput: "종목, 시작월, 초기 투자금을 올바르게 입력하세요.",
@@ -900,6 +978,17 @@
         codeLookupEmpty: "Enter a keyword.",
         codeLookupNoResult: "No matching company found.",
         codeLookupLoading: "Searching...",
+        csvTitle: "Upload CSV data (saved in browser cache)",
+        csvLoad: "Upload",
+        csvTemplate: "Template",
+        csvClear: "Clear",
+        csvNeedFile: "Please choose a CSV file.",
+        csvLoaded: "CSV loaded",
+        csvCleared: "Saved CSV data has been cleared.",
+        csvInvalid: "Invalid CSV. Required columns: date,symbol,adjclose(or close).",
+        csvMissing: "No CSV data found. Upload first.",
+        csvHintUs: "Example: date,symbol,adjclose / index symbol: ^GSPC or S&P500 (template is header-only)",
+        csvHintKr: "Example: date,symbol,adjclose / index symbol: ^KS11 or KOSPI (template is header-only)",
         startMoney: "Initial investment",
         monthly: "Monthly contribution (optional)",
         alertInput: "Please enter a valid symbol, start month, and initial investment.",
@@ -1018,10 +1107,20 @@
       document.getElementById("krLookupTitle").textContent = t("codeLookupTitle");
       document.getElementById("usCodeSearchBtn").textContent = t("codeLookupButton");
       document.getElementById("krCodeSearchBtn").textContent = t("codeLookupButton");
+      document.getElementById("usCsvTitle").textContent = `${t("csvTitle")} - ${t("csvHintUs")}`;
+      document.getElementById("krCsvTitle").textContent = `${t("csvTitle")} - ${t("csvHintKr")}`;
+      document.getElementById("usCsvLoadBtn").textContent = t("csvLoad");
+      document.getElementById("krCsvLoadBtn").textContent = t("csvLoad");
+      document.getElementById("usCsvTemplateBtn").textContent = t("csvTemplate");
+      document.getElementById("krCsvTemplateBtn").textContent = t("csvTemplate");
+      document.getElementById("usCsvClearBtn").textContent = t("csvClear");
+      document.getElementById("krCsvClearBtn").textContent = t("csvClear");
       document.getElementById("usMoney").placeholder = t("startMoney");
       document.getElementById("krMoney").placeholder = t("startMoney");
       document.getElementById("usMonthly").placeholder = t("monthly");
       document.getElementById("krMonthly").placeholder = t("monthly");
+      refreshCsvStatus("us");
+      refreshCsvStatus("kr");
       refreshLiveHints(true);
     }
 
@@ -1071,16 +1170,6 @@
       logs.unshift(item);
       setPendingLogs(logs.slice(0, 300));
 
-      // Best effort: send to Formspree so operator can collect missing names centrally.
-      try {
-        const fd = new FormData();
-        fd.append("_subject", "미매핑 자동로그");
-        fd.append("name", "mapping-bot");
-        fd.append("email", "noreply@local.invalid");
-        fd.append("message", JSON.stringify(item));
-        fetch(FORMSPREE_ENDPOINT, { method: "POST", body: fd, mode: "no-cors" });
-      } catch (_e) {
-      }
     }
 
     function buildLookupCandidates(raw) {
@@ -1133,24 +1222,6 @@
       localMatched.forEach((row) => {
         merged.set(row.symbol, { symbol: row.symbol, name: row.ko || row.en || row.symbol });
       });
-
-      try {
-        const res = await fetch(`/api/symbol-search?q=${encodeURIComponent(inputEl.value.trim())}&market=${encodeURIComponent(type)}`);
-        if (res.ok) {
-          const json = await res.json();
-          const apiItems = Array.isArray(json?.items) ? json.items : [];
-          apiItems.forEach((row) => {
-            const symbol = String(row?.symbol || "").toUpperCase();
-            if (!symbol) return;
-            const known = companyLabelsBySymbol[symbol];
-            const display = known?.ko || known?.en || row.shortName || row.longName || symbol;
-            if (!merged.has(symbol)) {
-              merged.set(symbol, { symbol, name: display });
-            }
-          });
-        }
-      } catch (_e) {
-      }
 
       const finalItems = Array.from(merged.values()).slice(0, 8);
       if (!finalItems.length) {
@@ -1227,67 +1298,265 @@
       targets.forEach((el) => io.observe(el));
     }
 
-    async function fetchData(symbol, startDate, market) {
-      const from = Math.floor(new Date(startDate + "-01").getTime() / 1000);
-      const to = Math.floor(Date.now() / 1000);
-      const qs = `symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}&market=${encodeURIComponent(market)}`;
-      let lastError = "API call failed";
+    function csvCacheKey(market) {
+      return `${CSV_CACHE_PREFIX}${market}`;
+    }
 
-      for (const endpoint of API_ENDPOINTS) {
-        const url = endpoint.includes("?") ? `${endpoint}&${qs}` : `${endpoint}?${qs}`;
+    function loadCachedMarketData(market) {
+      try {
+        const raw = localStorage.getItem(csvCacheKey(market));
+        const parsed = JSON.parse(raw || "{}");
+        if (!parsed || typeof parsed !== "object" || !parsed.series) return {};
+        return parsed.series;
+      } catch {
+        return {};
+      }
+    }
 
-        try {
-          const res = await fetch(url);
-          const body = await res.text();
+    function saveCachedMarketData(market, series) {
+      const payload = {
+        market,
+        updatedAt: new Date().toISOString(),
+        series
+      };
+      localStorage.setItem(csvCacheKey(market), JSON.stringify(payload));
+    }
 
-          if (!res.ok) {
-            let extra = body.slice(0, 120);
-            try {
-              const errJson = JSON.parse(body);
-              if ((errJson?.error || "").includes("Company name not found")) {
-                logMissingMapping(errJson);
-              }
-              if (Array.isArray(errJson?.suggestions) && errJson.suggestions.length) {
-                const hint = errJson.suggestions
-                  .slice(0, 3)
-                  .map((s) => `${s.name || s.symbol}(${s.symbol})`)
-                  .join(", ");
-                extra = `${errJson.error || "Error"} / 추천: ${hint}`;
-              } else if (errJson?.error) {
-                extra = errJson.error;
-              }
-            } catch (_e) {
-            }
-            lastError = `HTTP ${res.status}: ${extra}`;
-            continue;
+    function getCachedMeta(market) {
+      try {
+        const raw = localStorage.getItem(csvCacheKey(market));
+        const parsed = JSON.parse(raw || "{}");
+        return parsed && typeof parsed === "object" ? parsed : null;
+      } catch {
+        return null;
+      }
+    }
+
+    function normalizeHeaderName(name) {
+      return String(name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    }
+
+    function parseCsvLine(line) {
+      const out = [];
+      let cur = "";
+      let inQuote = false;
+      for (let i = 0; i < line.length; i += 1) {
+        const ch = line[i];
+        if (ch === "\"") {
+          if (inQuote && line[i + 1] === "\"") {
+            cur += "\"";
+            i += 1;
+          } else {
+            inQuote = !inQuote;
           }
-
-          const contentType = (res.headers.get("content-type") || "").toLowerCase();
-          if (!contentType.includes("application/json")) {
-            lastError = `Not JSON: ${body.slice(0, 120)}`;
-            continue;
-          }
-
-          const trimmed = body.trim();
-          if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) {
-            lastError = `Invalid JSON body: ${trimmed.slice(0, 120)}`;
-            continue;
-          }
-
-          const json = JSON.parse(trimmed);
-          const result = json?.chart?.result?.[0];
-          if (!result) {
-            lastError = "No chart result";
-            continue;
-          }
-
-          return result;
-        } catch (error) {
-          lastError = String(error);
+        } else if (ch === "," && !inQuote) {
+          out.push(cur);
+          cur = "";
+        } else {
+          cur += ch;
         }
       }
+      out.push(cur);
+      return out.map((v) => v.trim());
+    }
 
-      throw new Error(lastError);
+    function pickHeaderIndex(headerMap, keys) {
+      for (const key of keys) {
+        if (headerMap[key] != null) return headerMap[key];
+      }
+      return -1;
+    }
+
+    function parseTs(value) {
+      const s = String(value || "").trim();
+      if (!s) return 0;
+      if (/^\d+$/.test(s)) {
+        const n = Number(s);
+        if (n > 10_000_000_000) return Math.floor(n / 1000);
+        return n;
+      }
+      const ts = Date.parse(s);
+      if (!Number.isFinite(ts)) return 0;
+      return Math.floor(ts / 1000);
+    }
+
+    function normalizeUploadedSymbol(raw) {
+      const s = String(raw || "").trim().toUpperCase();
+      if (!s) return "";
+      if (s === "S&P500" || s === "SP500" || s === "SNP500") return "^GSPC";
+      if (s === "KOSPI") return "^KS11";
+      return s;
+    }
+
+    function parsePriceCsv(text) {
+      const lines = String(text || "").replace(/\r/g, "").split("\n").filter((line) => line.trim());
+      if (lines.length < 2) {
+        throw new Error(t("csvInvalid"));
+      }
+
+      const headerCols = parseCsvLine(lines[0]).map(normalizeHeaderName);
+      const headerMap = {};
+      headerCols.forEach((h, i) => {
+        if (h) headerMap[h] = i;
+      });
+
+      const dateIdx = pickHeaderIndex(headerMap, ["date", "datetime", "timestamp", "time"]);
+      const symbolIdx = pickHeaderIndex(headerMap, ["symbol", "ticker", "code", "종목코드", "종목"]);
+      const priceIdx = pickHeaderIndex(headerMap, ["adjclose", "adjustedclose", "close", "price", "종가"]);
+
+      if (dateIdx < 0 || symbolIdx < 0 || priceIdx < 0) {
+        throw new Error(t("csvInvalid"));
+      }
+
+      const series = {};
+      for (let i = 1; i < lines.length; i += 1) {
+        const cols = parseCsvLine(lines[i]);
+        if (!cols.length) continue;
+        const symbol = normalizeUploadedSymbol(cols[symbolIdx]);
+        const ts = parseTs(cols[dateIdx]);
+        const price = Number(cols[priceIdx]);
+        if (!symbol || !ts || !Number.isFinite(price) || price <= 0) continue;
+        if (!series[symbol]) series[symbol] = [];
+        series[symbol].push([ts, price]);
+      }
+
+      Object.keys(series).forEach((symbol) => {
+        const dedup = new Map();
+        series[symbol].forEach(([ts, price]) => dedup.set(ts, price));
+        const sorted = Array.from(dedup.entries())
+          .sort((a, b) => a[0] - b[0])
+          .map(([ts, price]) => [ts, price]);
+        series[symbol] = sorted;
+      });
+
+      if (!Object.keys(series).length) {
+        throw new Error(t("csvInvalid"));
+      }
+      return series;
+    }
+
+    function refreshCsvStatus(type) {
+      const el = document.getElementById(type + "CsvStatus");
+      if (!el) return;
+      const meta = getCachedMeta(type);
+      const count = Object.keys(meta?.series || {}).length;
+      if (!count) {
+        el.textContent = t("csvMissing");
+        return;
+      }
+      const dt = new Date(meta.updatedAt || Date.now());
+      const locale = currentLang === "ko" ? "ko-KR" : "en-US";
+      el.textContent = `${t("csvLoaded")}: ${count} symbols / ${dt.toLocaleString(locale)}`;
+    }
+
+    async function loadCsvData(type) {
+      const input = document.getElementById(type + "CsvFile");
+      const file = input?.files?.[0];
+      const status = document.getElementById(type + "CsvStatus");
+      if (!file) {
+        if (status) status.textContent = t("csvNeedFile");
+        return;
+      }
+
+      try {
+        const text = await file.text();
+        const series = parsePriceCsv(text);
+        marketDataStore[type] = series;
+        saveCachedMarketData(type, series);
+        refreshCsvStatus(type);
+      } catch (error) {
+        if (status) status.textContent = `${t("errorPrefix")}: ${error.message}`;
+      }
+    }
+
+    function downloadCsvTemplate(type) {
+      const indexSymbol = type === "us" ? "^GSPC" : "^KS11";
+      const content = [
+        "date,symbol,adjclose",
+        `YYYY-MM-DD,${indexSymbol},`,
+        "YYYY-MM-DD,COMPANY_SYMBOL,"
+      ].join("\n");
+      const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `template-${type}-prices.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function clearCsvData(type) {
+      localStorage.removeItem(csvCacheKey(type));
+      marketDataStore[type] = {};
+      const input = document.getElementById(type + "CsvFile");
+      if (input) input.value = "";
+      const status = document.getElementById(type + "CsvStatus");
+      if (status) status.textContent = t("csvCleared");
+    }
+
+    function resolveSymbolFromInput(rawInput, market) {
+      const raw = String(rawInput || "").trim();
+      if (!raw) return "";
+      const upper = raw.toUpperCase();
+      if (upper === "S&P500" || upper === "SP500") return "^GSPC";
+      if (upper === "KOSPI") return "^KS11";
+      if (upper === "^GSPC" || upper === "^KS11") return upper;
+      if (/^\d{6}\.(KS|KQ)$/i.test(raw)) return upper;
+      if (/^[A-Z][A-Z0-9.-]{0,10}$/i.test(raw)) return upper;
+
+      const candidates = buildLookupCandidates(raw);
+      const rows = Array.isArray(mappingRowsByMarket[market]) ? mappingRowsByMarket[market] : [];
+      for (const row of rows) {
+        const checks = [row.symbol, row.ko, row.en].concat(row.aliases || []).map(normalizeLookup);
+        const ok = checks.some((x) => candidates.some((q) => x === q));
+        if (ok) return row.symbol;
+      }
+
+      for (const [symbol, names] of Object.entries(COMPANY_LABELS)) {
+        const checks = [symbol, names.ko, names.en].map(normalizeLookup);
+        const ok = checks.some((x) => candidates.some((q) => x === q));
+        if (ok) return symbol;
+      }
+
+      return "";
+    }
+
+    function getSeriesFromLocal(symbolInput, startDate, market) {
+      const symbol = resolveSymbolFromInput(symbolInput, market);
+      if (!symbol) {
+        logMissingMapping({ query: symbolInput, market });
+        throw new Error(`${t("codeLookupNoResult")}: ${symbolInput}`);
+      }
+
+      const marketSeries = marketDataStore[market] || {};
+      const rows = Array.isArray(marketSeries[symbol]) ? marketSeries[symbol] : [];
+      if (!rows.length) {
+        throw new Error(`${t("csvMissing")} (${symbol})`);
+      }
+
+      const fromTs = Math.floor(new Date(startDate + "-01").getTime() / 1000);
+      const ts = [];
+      const adjclose = [];
+      rows.forEach(([tSec, price]) => {
+        if (tSec >= fromTs) {
+          ts.push(tSec);
+          adjclose.push(price);
+        }
+      });
+
+      if (!ts.length) {
+        throw new Error(`${symbol}: ${currentLang === "ko" ? "시작일 이후 데이터 없음" : "No data after start date"}`);
+      }
+
+      return {
+        meta: { symbol },
+        timestamp: ts,
+        indicators: {
+          adjclose: [{ adjclose }]
+        }
+      };
     }
 
     function getDisplayName(symbol, market, fallbackName) {
@@ -1446,10 +1715,14 @@
           }
         });
 
-        const stocks = await Promise.all(uniqueInputs.map((s) => fetchData(s, start, type)));
+        if (!Object.keys(marketDataStore[type] || {}).length) {
+          throw new Error(t("csvMissing"));
+        }
+
+        const stocks = uniqueInputs.map((s) => getSeriesFromLocal(s, start, type));
         const indexTicker = type === "us" ? "^GSPC" : "^KS11";
         const indexLabel = type === "us" ? t("indexUs") : t("indexKr");
-        const index = await fetchData(indexTicker, start, type);
+        const index = getSeriesFromLocal(indexTicker, start, type);
 
         const indexPrices = index?.indicators?.adjclose?.[0]?.adjclose || [];
         const indexTs = index?.timestamp || [];
@@ -1539,6 +1812,14 @@
       }
     }
 
+    function initCsvStore() {
+      marketDataStore.us = loadCachedMarketData("us");
+      marketDataStore.kr = loadCachedMarketData("kr");
+      refreshCsvStatus("us");
+      refreshCsvStatus("kr");
+    }
+
+    initCsvStore();
     applyLanguage();
     loadCompanyMappings();
     initLiveClock();

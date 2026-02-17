@@ -2,6 +2,9 @@ const MAPPING_JSON_URL = "https://stock-backtesting-gmc.pages.dev/company-mappin
 const MAPPING_CACHE_TTL_MS = 10 * 60 * 1000;
 const MARKET_UNIVERSE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 const DEFAULT_DATA_PROVIDER = "yahoo";
+const SNAPSHOT_KEY_PREFIX = "snapshot:chart";
+const SNAPSHOT_TTL_SECONDS = 14 * 24 * 60 * 60;
+const SNAPSHOT_BOOTSTRAP_LOOKBACK_SECONDS = 30 * 365 * 24 * 60 * 60;
 let mappingCache = { at: 0, data: null };
 let universeCache = { at: 0, kr: null, us: null };
 
@@ -20,6 +23,8 @@ export async function onRequestGet(context) {
     const providerId = (url.searchParams.get("provider") || DEFAULT_DATA_PROVIDER).toLowerCase();
     const from = url.searchParams.get("from");
     const to = url.searchParams.get("to");
+    const refresh = ["1", "true", "yes"].includes((url.searchParams.get("refresh") || "").toLowerCase());
+    const adminKey = (url.searchParams.get("admin_key") || "").trim();
     const provider = getDataProvider(providerId);
 
     if (!symbol) {
@@ -38,20 +43,55 @@ export async function onRequestGet(context) {
       finalSymbol = resolved;
     }
 
-    const period1 = Number(from) || 0;
-    const period2 = Number(to) || Math.floor(Date.now() / 1000);
+      const period1 = Number(from) || 0;
+      const period2 = Number(to) || Math.floor(Date.now() / 1000);
+      const snapshotKey = buildSnapshotKey(providerId, finalSymbol);
 
-    const upstream = await provider.fetchChart(finalSymbol, period1, period2);
+      if (refresh) {
+        const envAdminKey = String(context.env?.SNAPSHOT_ADMIN_KEY || "");
+        if (!envAdminKey || adminKey !== envAdminKey) {
+          return jsonResponse({ error: "Unauthorized refresh request" }, 401);
+        }
 
-    const data = await upstream.text();
-    return new Response(data, {
-      status: upstream.status,
-      headers: {
-        "Content-Type": "application/json; charset=utf-8",
-        "X-Resolved-Symbol": finalSymbol,
-        ...corsHeaders()
+        const bootstrapFrom = Math.max(0, Math.floor(Date.now() / 1000) - SNAPSHOT_BOOTSTRAP_LOOKBACK_SECONDS);
+        const bootstrapTo = Math.floor(Date.now() / 1000);
+        const upstream = await provider.fetchChart(finalSymbol, bootstrapFrom, bootstrapTo);
+        if (!upstream.ok) {
+          const body = await upstream.text();
+          return jsonResponse({ error: "Upstream refresh failed", status: upstream.status, body }, 502);
+        }
+        const upstreamJson = await upstream.json();
+        await writeSnapshot(context, snapshotKey, {
+          provider: providerId,
+          symbol: finalSymbol,
+          interval: "1mo",
+          updatedAt: new Date().toISOString(),
+          payload: upstreamJson
+        });
       }
-    });
+
+      const snapshot = await readSnapshot(context, snapshotKey);
+      if (!snapshot?.payload) {
+        return jsonResponse(
+          {
+            error: "Snapshot not ready",
+            symbol: finalSymbol,
+            hint: "관리자 refresh=1 요청으로 먼저 스냅샷을 수집하세요."
+          },
+          503
+        );
+      }
+
+      const sliced = sliceChartPayload(snapshot.payload, period1, period2);
+      return new Response(JSON.stringify(sliced), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/json; charset=utf-8",
+          "X-Resolved-Symbol": finalSymbol,
+          "X-Snapshot-Updated-At": String(snapshot.updatedAt || ""),
+          ...corsHeaders()
+        }
+      });
   } catch (error) {
     return jsonResponse({ error: "Pages function error", message: String(error) }, 500);
   }
@@ -109,54 +149,7 @@ async function resolveSymbolByMarket(query, market, mappings, provider) {
   const universeMapped = await resolveFromMarketUniverse(candidates, market, provider);
   if (universeMapped) return universeMapped;
 
-  const quotes = await searchQuotesWithVariants(query, provider);
-  if (!quotes.length) return null;
-
-  const filtered = quotes.filter((q) => {
-    const s = (q?.symbol || "").toUpperCase();
-    if (!s) return false;
-    if (market === "kr") return /\.(KS|KQ)$/.test(s);
-    if (market === "us") return !s.includes(".") && (q?.quoteType === "EQUITY" || q?.quoteType === "ETF");
-    return true;
-  });
-
-  if (!filtered.length) return null;
-
-  const exact = filtered.find((q) => {
-    const shortName = normalizeName(q?.shortname || "");
-    const longName = normalizeName(q?.longname || "");
-    return candidates.includes(shortName) || candidates.includes(longName);
-  });
-  if (exact?.symbol) return exact.symbol;
-
-  const partial = filtered.find((q) => {
-    const shortName = normalizeName(q?.shortname || "");
-    const longName = normalizeName(q?.longname || "");
-    return candidates.some((key) => shortName.includes(key) || longName.includes(key));
-  });
-  if (partial?.symbol) return partial.symbol;
-
-  return filtered[0]?.symbol || null;
-}
-
-async function searchQuotesWithVariants(rawQuery, provider) {
-  const variants = buildRawQueryVariants(rawQuery);
-  const merged = new Map();
-
-  for (const q of variants) {
-    const response = await provider.searchQuotes(q, 20);
-    if (!response.ok) continue;
-
-    const json = await response.json();
-    const quotes = Array.isArray(json?.quotes) ? json.quotes : [];
-    for (const row of quotes) {
-      const symbol = String(row?.symbol || "").toUpperCase();
-      if (!symbol) continue;
-      if (!merged.has(symbol)) merged.set(symbol, row);
-    }
-  }
-
-  return Array.from(merged.values());
+  return null;
 }
 
 async function resolveFromMarketUniverse(candidates, market, provider) {
@@ -182,6 +175,7 @@ async function resolveFromMarketUniverse(candidates, market, provider) {
 }
 
 async function fetchSuggestions(query, market, provider) {
+  if (!provider?.searchQuotes) return [];
   try {
     const response = await provider.searchQuotes(query, 10);
     if (!response.ok) return [];
@@ -203,6 +197,74 @@ async function fetchSuggestions(query, market, provider) {
   } catch {
     return [];
   }
+}
+
+function buildSnapshotKey(providerId, symbol) {
+  return `${SNAPSHOT_KEY_PREFIX}:${providerId}:${String(symbol || "").toUpperCase()}:1mo`;
+}
+
+async function readSnapshot(context, key) {
+  const kv = context.env?.SNAPSHOT_KV;
+  if (kv) {
+    const raw = await kv.get(key);
+    return raw ? JSON.parse(raw) : null;
+  }
+  const cacheKey = new Request(`https://snapshot.local/${encodeURIComponent(key)}`);
+  const matched = await caches.default.match(cacheKey);
+  if (!matched) return null;
+  return matched.json();
+}
+
+async function writeSnapshot(context, key, data) {
+  const body = JSON.stringify(data);
+  const kv = context.env?.SNAPSHOT_KV;
+  if (kv) {
+    await kv.put(key, body, { expirationTtl: SNAPSHOT_TTL_SECONDS });
+    return;
+  }
+  const cacheKey = new Request(`https://snapshot.local/${encodeURIComponent(key)}`);
+  await caches.default.put(
+    cacheKey,
+    new Response(body, {
+      headers: {
+        "Content-Type": "application/json; charset=utf-8",
+        "Cache-Control": `public, max-age=${SNAPSHOT_TTL_SECONDS}`
+      }
+    })
+  );
+}
+
+function sliceChartPayload(payload, from, to) {
+  const clone = JSON.parse(JSON.stringify(payload || {}));
+  const result0 = clone?.chart?.result?.[0];
+  if (!result0) return clone;
+
+  const timestamps = Array.isArray(result0.timestamp) ? result0.timestamp : [];
+  if (!timestamps.length) return clone;
+
+  const indices = [];
+  for (let i = 0; i < timestamps.length; i += 1) {
+    const ts = Number(timestamps[i]) || 0;
+    if (ts >= from && ts <= to) indices.push(i);
+  }
+
+  result0.timestamp = indices.map((i) => timestamps[i]);
+  const indicators = result0.indicators || {};
+  for (const groupKey of Object.keys(indicators)) {
+    const seriesGroup = indicators[groupKey];
+    if (!Array.isArray(seriesGroup)) continue;
+    indicators[groupKey] = seriesGroup.map((series) => {
+      const next = { ...series };
+      for (const [k, v] of Object.entries(series || {})) {
+        if (Array.isArray(v) && v.length === timestamps.length) {
+          next[k] = indices.map((i) => v[i]);
+        }
+      }
+      return next;
+    });
+  }
+
+  return clone;
 }
 
 async function loadKrUniverse() {
