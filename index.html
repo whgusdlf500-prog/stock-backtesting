@@ -804,6 +804,13 @@
       });
     }
 
+    function formatFinalValue(value) {
+      const n = Number(value).toLocaleString(currentLang === "ko" ? "ko-KR" : "en-US", {
+        maximumFractionDigits: 0
+      });
+      return currentLang === "ko" ? `${n}원` : n;
+    }
+
     function formatPercent(value) {
       return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
     }
@@ -973,7 +980,7 @@
           if (r.last > winner.last) winner = r;
         });
 
-        const valueText = summaryRows.map((r) => `${r.label} ${formatNumber(r.last)}`).join(" / ");
+        const valueText = summaryRows.map((r) => `${r.label} ${formatFinalValue(r.last)}`).join(" / ");
         const returnText = summaryRows.map((r) => `${r.label} ${formatPercent(r.ret)}`).join(" / ");
         const principalText = `${t("principalPrefix")}: ${formatNumber(totalInvested)}`;
         const finalValueText = `${t("resultPrefix")}: ${valueText}`;
