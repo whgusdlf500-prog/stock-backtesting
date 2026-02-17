@@ -230,6 +230,57 @@
       text-align: center;
     }
 
+    .quality-card {
+      margin-top: 22px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      padding: 14px;
+    }
+
+    .quality-card h3 {
+      margin: 0 0 10px;
+      font-size: 19px;
+    }
+
+    .quality-card p,
+    .quality-card li {
+      color: #1f2937;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .quality-grid {
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .quality-box {
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 10px 12px;
+      background: #fcfdff;
+    }
+
+    .policy-links {
+      margin-top: 16px;
+      text-align: center;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .policy-links a {
+      color: #1f2937;
+      font-weight: 700;
+      text-decoration: none;
+      margin: 0 6px;
+    }
+
+    .policy-links a:hover {
+      text-decoration: underline;
+    }
+
     canvas {
       width: 100%;
       max-height: 420px;
@@ -238,6 +289,7 @@
     @media (max-width: 700px) {
       .form-grid { grid-template-columns: 1fr; }
       .contact-grid { grid-template-columns: 1fr; }
+      .quality-grid { grid-template-columns: 1fr; }
       h1 { font-size: 24px; }
       .top-row { justify-content: center; }
     }
@@ -298,6 +350,45 @@
       </div>
     </section>
 
+    <section class="quality-card">
+      <h3>투자 학습 허브</h3>
+      <p>이 페이지는 단순 시세 조회가 아니라 장기 투자 판단을 돕는 학습용 도구입니다. 모든 수치는 과거 데이터 기반이며 미래 수익을 보장하지 않습니다.</p>
+      <div class="quality-grid">
+        <article class="quality-box">
+          <h4>백테스트 해석 방법</h4>
+          <ul>
+            <li>원금, 최종 평가금, 수익률을 함께 비교하세요.</li>
+            <li>월 적립금이 있으면 실제 투자 습관과 유사한 결과를 확인할 수 있습니다.</li>
+            <li>단기 구간보다 5년 이상 장기 구간에서 변동성을 확인하는 것이 좋습니다.</li>
+          </ul>
+        </article>
+        <article class="quality-box">
+          <h4>데이터 산출 기준</h4>
+          <ul>
+            <li>데이터 출처: Yahoo Finance 공개 시세 API</li>
+            <li>주기: 월 단위(adjclose 기준)</li>
+            <li>한국 지수 비교: KOSPI, 미국 지수 비교: S&amp;P500</li>
+          </ul>
+        </article>
+        <article class="quality-box">
+          <h4>투자 시 유의사항</h4>
+          <ul>
+            <li>과거 수익률은 미래 수익률을 보장하지 않습니다.</li>
+            <li>세금, 수수료, 환율, 슬리피지는 기본 계산에서 제외됩니다.</li>
+            <li>실거래 전 증권사 체결 기준과 공시를 반드시 확인하세요.</li>
+          </ul>
+        </article>
+        <article class="quality-box">
+          <h4>사이트 운영 원칙</h4>
+          <ul>
+            <li>사용자 경험 우선: 과도한 팝업/강제 이동 없음</li>
+            <li>중복/복붙 페이지 대신 핵심 정보 중심</li>
+            <li>문의 채널과 댓글을 통한 지속적인 개선</li>
+          </ul>
+        </article>
+      </div>
+    </section>
+
     <section class="contact-card">
       <h3>제휴 문의</h3>
       <form action="https://formspree.io/f/xaqdjwzq" method="POST">
@@ -318,6 +409,14 @@
       <div id="disqus_thread"></div>
       <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
     </section>
+
+    <div class="policy-links">
+      <a href="/about.html">사이트 소개</a>
+      <a href="/editorial-policy.html">편집 원칙</a>
+      <a href="/privacy.html">개인정보처리방침</a>
+      <a href="/terms.html">이용약관</a>
+      <span>최종 업데이트: 2026-02-17</span>
+    </div>
   </div>
 
   <script>
