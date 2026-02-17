@@ -1,6 +1,8 @@
 const MAPPING_JSON_URL = "https://stock-backtesting-gmc.pages.dev/company-mappings.json";
 const MAPPING_CACHE_TTL_MS = 10 * 60 * 1000;
+const MARKET_UNIVERSE_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 let mappingCache = { at: 0, data: null };
+let universeCache = { at: 0, kr: null, us: null };
 
 export default {
   async fetch(request) {
@@ -107,6 +109,9 @@ async function resolveSymbolByMarket(query, market, mappings) {
     }
   }
 
+  const universeMapped = await resolveFromMarketUniverse(candidates, market);
+  if (universeMapped) return universeMapped;
+
   const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=20&newsCount=0`;
   const response = await fetch(searchUrl, {
     headers: {
@@ -143,6 +148,138 @@ async function resolveSymbolByMarket(query, market, mappings) {
   if (partial?.symbol) return partial.symbol;
 
   return filtered[0]?.symbol || null;
+}
+
+async function resolveFromMarketUniverse(candidates, market) {
+  if (!candidates?.length) return null;
+  if (market === "kr") {
+    const kr = await loadKrUniverse();
+    if (!kr) return null;
+    for (const key of candidates) {
+      const mapped = kr[key];
+      if (mapped) return mapped;
+    }
+    return null;
+  }
+  if (market === "us") {
+    const us = await loadSp500Universe();
+    if (!us) return null;
+    for (const key of candidates) {
+      const mapped = us[key];
+      if (mapped) return mapped;
+    }
+  }
+  return null;
+}
+
+async function loadKrUniverse() {
+  const now = Date.now();
+  if (universeCache.kr && now - universeCache.at < MARKET_UNIVERSE_CACHE_TTL_MS) {
+    return universeCache.kr;
+  }
+
+  try {
+    const [kospiMap, kosdaqMap] = await Promise.all([
+      fetchKrMarketMap("stockMkt", ".KS"),
+      fetchKrMarketMap("kosdaqMkt", ".KQ")
+    ]);
+    const merged = { ...(kospiMap || {}), ...(kosdaqMap || {}) };
+    universeCache.kr = merged;
+    universeCache.at = now;
+    return merged;
+  } catch {
+    return universeCache.kr;
+  }
+}
+
+async function fetchKrMarketMap(marketType, suffix) {
+  const url = `https://kind.krx.co.kr/corpgeneral/corpList.do?method=download&marketType=${marketType}`;
+  const res = await fetch(url, {
+    headers: {
+      "User-Agent": "Mozilla/5.0",
+      "Referer": "https://kind.krx.co.kr/"
+    }
+  });
+  if (!res.ok) return {};
+
+  const buf = await res.arrayBuffer();
+  let html = "";
+  try {
+    html = new TextDecoder("euc-kr").decode(buf);
+  } catch {
+    html = new TextDecoder().decode(buf);
+  }
+
+  const map = {};
+  const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  let rowMatch;
+  while ((rowMatch = rowRe.exec(html))) {
+    const row = rowMatch[1];
+    const tdMatches = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
+    if (tdMatches.length < 2) continue;
+
+    const rawName = stripHtml(tdMatches[0][1]);
+    const rawCode = stripHtml(tdMatches[1][1]).replace(/\D/g, "");
+    if (!rawName || rawCode.length !== 6) continue;
+
+    const symbol = `${rawCode}${suffix}`;
+    const keys = buildCandidateKeys(rawName);
+    for (const key of keys) {
+      map[key] = symbol;
+    }
+  }
+
+  return map;
+}
+
+async function loadSp500Universe() {
+  const now = Date.now();
+  if (universeCache.us && now - universeCache.at < MARKET_UNIVERSE_CACHE_TTL_MS) {
+    return universeCache.us;
+  }
+
+  try {
+    const res = await fetch("https://en.wikipedia.org/wiki/List_of_S%26P_500_companies", {
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
+    });
+    if (!res.ok) return universeCache.us;
+    const html = await res.text();
+    const map = parseSp500FromWikipedia(html);
+    universeCache.us = map;
+    universeCache.at = now;
+    return map;
+  } catch {
+    return universeCache.us;
+  }
+}
+
+function parseSp500FromWikipedia(html) {
+  const map = {};
+  const tableMatch = html.match(/<table[^>]*id="constituents"[\s\S]*?<\/table>/i);
+  if (!tableMatch) return map;
+
+  const table = tableMatch[0];
+  const rowRe = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  let rowMatch;
+  while ((rowMatch = rowRe.exec(table))) {
+    const row = rowMatch[1];
+    const tdMatches = [...row.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)];
+    if (tdMatches.length < 2) continue;
+
+    const rawSymbol = stripHtml(tdMatches[0][1]).trim();
+    const rawName = stripHtml(tdMatches[1][1]).trim();
+    if (!rawSymbol || !rawName) continue;
+
+    const symbol = rawSymbol.replace(/\./g, "-").toUpperCase();
+    const keys = buildCandidateKeys(rawName);
+    for (const key of keys) {
+      map[key] = symbol;
+    }
+    map[normalizeName(symbol)] = symbol;
+  }
+  return map;
 }
 
 async function loadMappings() {
@@ -237,6 +374,15 @@ function normalizeName(v) {
     .toLowerCase()
     .replace(/\s+/g, "")
     .replace(/[^0-9a-z\u3131-\u318e\uac00-\ud7a3&]/g, "");
+}
+
+function stripHtml(v) {
+  return String(v || "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 const KR_NAME_TO_SYMBOL = {
