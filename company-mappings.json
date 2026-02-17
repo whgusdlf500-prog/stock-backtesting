@@ -45,6 +45,7 @@
       { "symbol": "036570.KS", "ko": "엔씨소프트", "en": "NCSoft", "aliases": ["엔씨소프트"] },
       { "symbol": "251270.KS", "ko": "넷마블", "en": "Netmarble", "aliases": ["넷마블"] },
       { "symbol": "352820.KS", "ko": "하이브", "en": "HYBE", "aliases": ["하이브", "hybe"] }
+      ,{ "symbol": "247540.KQ", "ko": "에코프로비엠", "en": "Ecopro BM", "aliases": ["에코프로비엠", "ecoprobm", "ecopro bm"] }
     ],
     "us": [
       { "symbol": "AAPL", "ko": "애플", "en": "Apple", "aliases": ["애플", "apple"] },
