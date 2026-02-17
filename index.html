@@ -193,6 +193,7 @@
 
   <script>
     const WORKER_URL = "https://0c0a4ea6.stock-backtesting-gmc.pages.dev";
+    const API_ENDPOINTS = ["/api/chart", WORKER_URL].filter(Boolean);
     const charts = {};
 
     function showPage(id) {
@@ -205,19 +206,29 @@
     async function fetchData(symbol, startDate, market) {
       const from = Math.floor(new Date(startDate + "-01").getTime() / 1000);
       const to = Math.floor(Date.now() / 1000);
-      const query = `${WORKER_URL}?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}&market=${encodeURIComponent(market)}`;
+      const qs = `symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}&market=${encodeURIComponent(market)}`;
+      let lastError = "API 호출 실패";
 
-      const res = await fetch(query);
-      if (!res.ok) {
-        throw new Error("데이터 응답 오류");
+      for (const endpoint of API_ENDPOINTS) {
+        const url = endpoint.includes("?") ? `${endpoint}&${qs}` : `${endpoint}?${qs}`;
+        try {
+          const res = await fetch(url);
+          if (!res.ok) {
+            const body = await res.text();
+            lastError = `응답 오류(${res.status}): ${body.slice(0, 120)}`;
+            continue;
+          }
+
+          const json = await res.json();
+          const result = json?.chart?.result?.[0];
+          if (result) return result;
+          lastError = "유효한 차트 데이터 없음";
+        } catch (error) {
+          lastError = String(error);
+        }
       }
 
-      const json = await res.json();
-      const result = json?.chart?.result?.[0];
-      if (!result) {
-        throw new Error("유효한 차트 데이터 없음");
-      }
-      return result;
+      throw new Error(lastError);
     }
 
     function toFixed2(value) {
@@ -225,11 +236,6 @@
     }
 
     async function runBacktest(type) {
-      if (WORKER_URL.includes("your-worker-name")) {
-        alert("WORKER_URL을 실제 Cloudflare Worker 주소로 변경하세요.");
-        return;
-      }
-
       const ticker = document.getElementById(type + "Ticker").value.trim();
       const start = document.getElementById(type + "Start").value;
       const money = parseFloat(document.getElementById(type + "Money").value);
@@ -330,7 +336,7 @@
       } catch (error) {
         console.error(error);
         resultEl.textContent = "";
-        alert("백테스트 중 오류가 발생했습니다. 종목 코드/워커 URL을 확인하세요.");
+        alert(`백테스트 중 오류가 발생했습니다: ${error.message}`);
       }
     }
   </script>
