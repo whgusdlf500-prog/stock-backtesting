@@ -238,6 +238,13 @@
       padding: 10px;
     }
 
+    .lookup-title {
+      font-size: 13px;
+      font-weight: 800;
+      color: #111827;
+      margin: 0 0 8px;
+    }
+
     .lookup-row {
       display: grid;
       grid-template-columns: 1fr auto;
@@ -353,6 +360,7 @@
     <section id="us" class="page active">
       <h2 id="usPanelTitle" class="panel-title">S&amp;P500 비교 (USD)</h2>
       <div class="lookup-card">
+        <div id="usLookupTitle" class="lookup-title">종목코드 검색</div>
         <div class="lookup-row">
           <input id="usCodeSearch" placeholder="종목코드 검색 (예: 애플, NVIDIA)">
           <button id="usCodeSearchBtn" type="button" onclick="searchSymbols('us')">코드 찾기</button>
@@ -380,6 +388,7 @@
     <section id="kr" class="page">
       <h2 id="krPanelTitle" class="panel-title">KOSPI 비교 (KRW)</h2>
       <div class="lookup-card">
+        <div id="krLookupTitle" class="lookup-title">종목코드 검색</div>
         <div class="lookup-row">
           <input id="krCodeSearch" placeholder="종목코드 검색 (예: 삼성전자, 에코프로비엠)">
           <button id="krCodeSearchBtn" type="button" onclick="searchSymbols('kr')">코드 찾기</button>
@@ -500,6 +509,7 @@
         compare2: "비교 회사 2 (선택)",
         codeLookupPlaceholderUs: "종목코드 검색 (예: 애플, NVIDIA)",
         codeLookupPlaceholderKr: "종목코드 검색 (예: 삼성전자, 에코프로비엠)",
+        codeLookupTitle: "종목코드 검색",
         codeLookupButton: "코드 찾기",
         codeLookupEmpty: "검색어를 입력하세요.",
         codeLookupNoResult: "일치하는 종목을 찾지 못했습니다.",
@@ -530,6 +540,7 @@
         compare2: "Compare company 2 (optional)",
         codeLookupPlaceholderUs: "Find ticker (e.g., Apple, NVIDIA)",
         codeLookupPlaceholderKr: "Find ticker (e.g., 삼성전자, 에코프로비엠)",
+        codeLookupTitle: "Ticker Lookup",
         codeLookupButton: "Find Code",
         codeLookupEmpty: "Enter a keyword.",
         codeLookupNoResult: "No matching company found.",
@@ -647,6 +658,8 @@
       document.getElementById("krCompare2").placeholder = t("compare2");
       document.getElementById("usCodeSearch").placeholder = t("codeLookupPlaceholderUs");
       document.getElementById("krCodeSearch").placeholder = t("codeLookupPlaceholderKr");
+      document.getElementById("usLookupTitle").textContent = t("codeLookupTitle");
+      document.getElementById("krLookupTitle").textContent = t("codeLookupTitle");
       document.getElementById("usCodeSearchBtn").textContent = t("codeLookupButton");
       document.getElementById("krCodeSearchBtn").textContent = t("codeLookupButton");
       document.getElementById("usMoney").placeholder = t("startMoney");
@@ -662,11 +675,41 @@
         .replace(/[^0-9a-z\u3131-\u318e\uac00-\ud7a3&.-]/g, "");
     }
 
+    function buildLookupCandidates(raw) {
+      const base = normalizeLookup(raw);
+      if (!base) return [];
+      const transforms = [
+        (v) => v.replace(/^주식회사/, ""),
+        (v) => v.replace(/주식회사/g, ""),
+        (v) => v.replace(/^엘지/, "lg"),
+        (v) => v.replace(/엘지/g, "lg"),
+        (v) => v.replace(/^에스케이/, "sk"),
+        (v) => v.replace(/에스케이/g, "sk"),
+        (v) => v.replace(/케이티앤지/g, "ktg"),
+        (v) => v.replace(/앤드/g, "and"),
+        (v) => v.replace(/&/g, "and"),
+        (v) => v.replace(/and/g, "&")
+      ];
+
+      const set = new Set([base]);
+      const queue = [base];
+      while (queue.length) {
+        const cur = queue.shift();
+        for (const fn of transforms) {
+          const next = normalizeLookup(fn(cur));
+          if (!next || set.has(next)) continue;
+          set.add(next);
+          queue.push(next);
+        }
+      }
+      return Array.from(set);
+    }
+
     function searchSymbols(type) {
       const inputEl = document.getElementById(type + "CodeSearch");
       const resultEl = document.getElementById(type + "CodeSearchResult");
-      const q = normalizeLookup(inputEl.value);
-      if (!q) {
+      const candidates = buildLookupCandidates(inputEl.value);
+      if (!candidates.length) {
         resultEl.textContent = t("codeLookupEmpty");
         return;
       }
@@ -674,7 +717,7 @@
       const rows = Array.isArray(mappingRowsByMarket[type]) ? mappingRowsByMarket[type] : [];
       const matched = rows.filter((row) => {
         const checks = [row.symbol, row.ko, row.en].concat(row.aliases || []).map(normalizeLookup);
-        return checks.some((v) => v.includes(q));
+        return checks.some((v) => candidates.some((q) => v.includes(q)));
       }).slice(0, 5);
 
       if (!matched.length) {

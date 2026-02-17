@@ -16,7 +16,7 @@
       { "symbol": "005490.KS", "ko": "POSCO홀딩스", "en": "POSCO Holdings", "aliases": ["포스코홀딩스", "posco홀딩스", "posco holdings"] },
       { "symbol": "003670.KS", "ko": "포스코퓨처엠", "en": "POSCO Future M", "aliases": ["포스코퓨처엠"] },
       { "symbol": "006400.KS", "ko": "삼성SDI", "en": "Samsung SDI", "aliases": ["삼성sdi", "samsung sdi"] },
-      { "symbol": "051910.KS", "ko": "LG화학", "en": "LG Chem", "aliases": ["lg화학", "lg chem"] },
+      { "symbol": "051910.KS", "ko": "LG화학", "en": "LG Chem", "aliases": ["lg화학", "엘지화학", "lg chem", "lg화학우", "엘지화학우"] },
       { "symbol": "012450.KS", "ko": "한화에어로스페이스", "en": "Hanwha Aerospace", "aliases": ["한화에어로스페이스"] },
       { "symbol": "042660.KS", "ko": "한화오션", "en": "Hanwha Ocean", "aliases": ["한화오션"] },
       { "symbol": "015760.KS", "ko": "한국전력", "en": "KEPCO", "aliases": ["한국전력", "kepco"] },
@@ -44,8 +44,8 @@
       { "symbol": "259960.KS", "ko": "크래프톤", "en": "Krafton", "aliases": ["크래프톤"] },
       { "symbol": "036570.KS", "ko": "엔씨소프트", "en": "NCSoft", "aliases": ["엔씨소프트"] },
       { "symbol": "251270.KS", "ko": "넷마블", "en": "Netmarble", "aliases": ["넷마블"] },
-      { "symbol": "352820.KS", "ko": "하이브", "en": "HYBE", "aliases": ["하이브", "hybe"] }
-      ,{ "symbol": "247540.KQ", "ko": "에코프로비엠", "en": "Ecopro BM", "aliases": ["에코프로비엠", "ecoprobm", "ecopro bm"] }
+      { "symbol": "352820.KS", "ko": "하이브", "en": "HYBE", "aliases": ["하이브", "hybe"] },
+      { "symbol": "247540.KQ", "ko": "에코프로비엠", "en": "Ecopro BM", "aliases": ["에코프로비엠", "에코프로 비엠", "ecoprobm", "ecopro bm"] }
     ],
     "us": [
       { "symbol": "AAPL", "ko": "애플", "en": "Apple", "aliases": ["애플", "apple"] },

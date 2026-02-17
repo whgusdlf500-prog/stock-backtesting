@@ -86,18 +86,25 @@ function isTickerFormat(value) {
 }
 
 async function resolveSymbolByMarket(query, market, mappings) {
-  const normalized = normalizeName(query);
-  const dynamic = findSymbolInMappings(normalized, market, mappings);
-  if (dynamic) return dynamic;
+  const candidates = buildCandidateKeys(query);
+
+  for (const key of candidates) {
+    const dynamic = findSymbolInMappings(key, market, mappings);
+    if (dynamic) return dynamic;
+  }
 
   if (market === "kr") {
-    const mapped = KR_NAME_TO_SYMBOL[normalized];
-    if (mapped) return mapped;
+    for (const key of candidates) {
+      const mapped = KR_NAME_TO_SYMBOL[key];
+      if (mapped) return mapped;
+    }
   }
 
   if (market === "us") {
-    const mapped = US_NAME_TO_SYMBOL[normalized];
-    if (mapped) return mapped;
+    for (const key of candidates) {
+      const mapped = US_NAME_TO_SYMBOL[key];
+      if (mapped) return mapped;
+    }
   }
 
   const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=20&newsCount=0`;
@@ -124,14 +131,14 @@ async function resolveSymbolByMarket(query, market, mappings) {
   const exact = filtered.find((q) => {
     const shortName = normalizeName(q?.shortname || "");
     const longName = normalizeName(q?.longname || "");
-    return shortName === normalized || longName === normalized;
+    return candidates.includes(shortName) || candidates.includes(longName);
   });
   if (exact?.symbol) return exact.symbol;
 
   const partial = filtered.find((q) => {
     const shortName = normalizeName(q?.shortname || "");
     const longName = normalizeName(q?.longname || "");
-    return shortName.includes(normalized) || longName.includes(normalized);
+    return candidates.some((key) => shortName.includes(key) || longName.includes(key));
   });
   if (partial?.symbol) return partial.symbol;
 
@@ -190,6 +197,39 @@ function findSymbolInMappings(normalizedQuery, market, mappings) {
     return mappings[market]?.[normalizedQuery] || null;
   }
   return mappings.all?.[normalizedQuery] || null;
+}
+
+function buildCandidateKeys(input) {
+  const base = normalizeName(input);
+  if (!base) return [];
+
+  const transforms = [
+    (v) => v.replace(/^주식회사/, ""),
+    (v) => v.replace(/주식회사/g, ""),
+    (v) => v.replace(/^엘지/, "lg"),
+    (v) => v.replace(/엘지/g, "lg"),
+    (v) => v.replace(/^에스케이/, "sk"),
+    (v) => v.replace(/에스케이/g, "sk"),
+    (v) => v.replace(/케이티앤지/g, "ktg"),
+    (v) => v.replace(/앤드/g, "and"),
+    (v) => v.replace(/&/g, "and"),
+    (v) => v.replace(/and/g, "&")
+  ];
+
+  const set = new Set([base]);
+  const queue = [base];
+
+  while (queue.length) {
+    const cur = queue.shift();
+    for (const fn of transforms) {
+      const next = normalizeName(fn(cur));
+      if (!next || set.has(next)) continue;
+      set.add(next);
+      queue.push(next);
+    }
+  }
+
+  return Array.from(set);
 }
 
 function normalizeName(v) {
