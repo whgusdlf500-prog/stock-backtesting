@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>개미 백테스트 PRO</title>
+  <title>장기투자연구소</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -345,7 +345,7 @@
 <body>
   <div class="container">
     <div class="top-row">
-      <h1 id="titleText">개미 백테스트 PRO</h1>
+      <h1 id="titleText">장기투자연구소</h1>
       <div class="lang-switch">
         <button id="lang-ko" class="active-lang" onclick="setLanguage('ko')">한국어</button>
         <button id="lang-en" onclick="setLanguage('en')">English</button>
@@ -495,7 +495,7 @@
 
     const I18N = {
       ko: {
-        title: "개미 백테스트 PRO",
+        title: "장기투자연구소",
         tabUs: "서학개미",
         tabKr: "동학개미",
         usPanel: "S&P500 비교 (USD)",
@@ -526,7 +526,7 @@
         errorPrefix: "백테스트 중 오류가 발생했습니다"
       },
       en: {
-        title: "Ant Backtest PRO",
+        title: "Long-Term Investment Lab",
         tabUs: "US Stocks",
         tabKr: "Korean Stocks",
         usPanel: "S&P500 Comparison (USD)",
@@ -804,11 +804,12 @@
       });
     }
 
-    function formatFinalValue(value) {
+    function formatFinalValue(value, market) {
       const n = Number(value).toLocaleString(currentLang === "ko" ? "ko-KR" : "en-US", {
         maximumFractionDigits: 0
       });
-      return currentLang === "ko" ? `${n}원` : n;
+      if (market === "us") return `${n} USD`;
+      return `${n}원`;
     }
 
     function formatPercent(value) {
@@ -980,7 +981,7 @@
           if (r.last > winner.last) winner = r;
         });
 
-        const valueText = summaryRows.map((r) => `${r.label} ${formatFinalValue(r.last)}`).join(" / ");
+        const valueText = summaryRows.map((r) => `${r.label} ${formatFinalValue(r.last, type)}`).join(" / ");
         const returnText = summaryRows.map((r) => `${r.label} ${formatPercent(r.ret)}`).join(" / ");
         const principalText = `${t("principalPrefix")}: ${formatNumber(totalInvested)}`;
         const finalValueText = `${t("resultPrefix")}: ${valueText}`;
