@@ -194,6 +194,8 @@
       <h2 id="usPanelTitle" class="panel-title">S&amp;P500 비교 (USD)</h2>
       <div class="form-grid">
         <input id="usTicker" placeholder="티커/회사명 (예: AAPL, 애플)">
+        <input id="usCompare1" placeholder="비교 회사 1 (선택)">
+        <input id="usCompare2" placeholder="비교 회사 2 (선택)">
         <input type="month" id="usStart">
         <input type="number" id="usMoney" placeholder="초기 투자금">
         <input type="number" id="usMonthly" placeholder="월 적립금 (선택)">
@@ -212,6 +214,8 @@
       <h2 id="krPanelTitle" class="panel-title">KOSPI 비교 (KRW)</h2>
       <div class="form-grid">
         <input id="krTicker" placeholder="종목코드/회사명 (예: 005930.KS, 삼성전자)">
+        <input id="krCompare1" placeholder="비교 회사 1 (선택)">
+        <input id="krCompare2" placeholder="비교 회사 2 (선택)">
         <input type="month" id="krStart">
         <input type="number" id="krMoney" placeholder="초기 투자금">
         <input type="number" id="krMonthly" placeholder="월 적립금 (선택)">
@@ -248,6 +252,8 @@
         run: "백테스트 실행",
         usTicker: "티커/회사명 (예: AAPL, 애플)",
         krTicker: "종목코드/회사명 (예: 005930.KS, 삼성전자)",
+        compare1: "비교 회사 1 (선택)",
+        compare2: "비교 회사 2 (선택)",
         startMoney: "초기 투자금",
         monthly: "월 적립금 (선택)",
         alertInput: "종목, 시작월, 초기 투자금을 올바르게 입력하세요.",
@@ -256,6 +262,7 @@
         indexKr: "KOSPI",
         winner: "우세",
         resultPrefix: "최종 평가금",
+        principalPrefix: "원금",
         returnPrefix: "수익률",
         errorPrefix: "백테스트 중 오류가 발생했습니다"
       },
@@ -270,6 +277,8 @@
         run: "Run Backtest",
         usTicker: "Ticker/Company (e.g., AAPL, 애플)",
         krTicker: "Ticker/Company (e.g., 005930.KS, 삼성전자)",
+        compare1: "Compare company 1 (optional)",
+        compare2: "Compare company 2 (optional)",
         startMoney: "Initial investment",
         monthly: "Monthly contribution (optional)",
         alertInput: "Please enter a valid symbol, start month, and initial investment.",
@@ -278,6 +287,7 @@
         indexKr: "KOSPI",
         winner: "Winner",
         resultPrefix: "Final value",
+        principalPrefix: "Principal",
         returnPrefix: "Return",
         errorPrefix: "Backtest failed"
       }
@@ -368,7 +378,11 @@
       document.getElementById("runUsBtn").textContent = t("run");
       document.getElementById("runKrBtn").textContent = t("run");
       document.getElementById("usTicker").placeholder = t("usTicker");
+      document.getElementById("usCompare1").placeholder = t("compare1");
+      document.getElementById("usCompare2").placeholder = t("compare2");
       document.getElementById("krTicker").placeholder = t("krTicker");
+      document.getElementById("krCompare1").placeholder = t("compare1");
+      document.getElementById("krCompare2").placeholder = t("compare2");
       document.getElementById("usMoney").placeholder = t("startMoney");
       document.getElementById("krMoney").placeholder = t("startMoney");
       document.getElementById("usMonthly").placeholder = t("monthly");
@@ -453,7 +467,7 @@
       return `${value >= 0 ? "+" : ""}${value.toFixed(2)}%`;
     }
 
-    function animateChart(type, labels, stockSeries, indexSeries, stockLabel, indexLabel) {
+    function animateChart(type, labels, datasetsInput) {
       if (chartTimers[type]) {
         clearInterval(chartTimers[type]);
       }
@@ -466,20 +480,12 @@
         type: "line",
         data: {
           labels: [],
-          datasets: [
-            {
-              label: stockLabel,
-              data: [],
-              borderWidth: 2,
-              tension: 0.2
-            },
-            {
-              label: indexLabel,
-              data: [],
-              borderWidth: 2,
-              tension: 0.2
-            }
-          ]
+          datasets: datasetsInput.map((d) => ({
+            label: d.label,
+            data: [],
+            borderWidth: 2,
+            tension: 0.2
+          }))
         },
         options: {
           responsive: true,
@@ -499,8 +505,9 @@
 
       chartTimers[type] = setInterval(() => {
         chart.data.labels.push(labels[i]);
-        chart.data.datasets[0].data.push(stockSeries[i]);
-        chart.data.datasets[1].data.push(indexSeries[i]);
+        chart.data.datasets.forEach((ds, idx) => {
+          ds.data.push(datasetsInput[idx].data[i]);
+        });
         chart.update("none");
 
         i += 1;
@@ -512,6 +519,8 @@
 
     async function runBacktest(type) {
       const ticker = document.getElementById(type + "Ticker").value.trim();
+      const compare1 = document.getElementById(type + "Compare1").value.trim();
+      const compare2 = document.getElementById(type + "Compare2").value.trim();
       const start = document.getElementById(type + "Start").value;
       const money = parseFloat(document.getElementById(type + "Money").value);
       const monthly = parseFloat(document.getElementById(type + "Monthly").value || "0");
@@ -525,18 +534,26 @@
       try {
         resultEl.textContent = t("loading");
 
-        const stock = await fetchData(ticker, start, type);
+        const compareInputs = [ticker, compare1, compare2]
+          .map((v) => v.trim())
+          .filter(Boolean);
+        const uniqueInputs = [];
+        const seen = new Set();
+        compareInputs.forEach((v) => {
+          const k = v.toLowerCase();
+          if (!seen.has(k)) {
+            seen.add(k);
+            uniqueInputs.push(v);
+          }
+        });
+
+        const stocks = await Promise.all(uniqueInputs.map((s) => fetchData(s, start, type)));
         const indexTicker = type === "us" ? "^GSPC" : "^KS11";
         const indexLabel = type === "us" ? t("indexUs") : t("indexKr");
         const index = await fetchData(indexTicker, start, type);
 
-        const stockPrices = stock?.indicators?.adjclose?.[0]?.adjclose || [];
         const indexPrices = index?.indicators?.adjclose?.[0]?.adjclose || [];
-        const stockTs = stock?.timestamp || [];
         const indexTs = index?.timestamp || [];
-
-        const stockSymbol = stock?.meta?.symbol || ticker.toUpperCase();
-        const stockName = getDisplayName(stockSymbol, type, stock?.meta?.longName || stock?.meta?.shortName);
 
         const indexMap = new Map();
         indexTs.forEach((ts, i) => {
@@ -544,29 +561,48 @@
           if (p != null) indexMap.set(ts, p);
         });
 
-        let shares = 0;
-        let indexShares = 0;
-        const labels = [];
-        const stockValue = [];
-        const indexValue = [];
+        const stockSeries = stocks.map((s) => {
+          const symbol = s?.meta?.symbol || "";
+          const name = getDisplayName(symbol, type, s?.meta?.longName || s?.meta?.shortName);
+          const prices = s?.indicators?.adjclose?.[0]?.adjclose || [];
+          const ts = s?.timestamp || [];
+          const priceMap = new Map();
+          ts.forEach((t, i) => {
+            const p = prices[i];
+            if (p != null) priceMap.set(t, p);
+          });
+          return { symbol, name, priceMap, shares: 0, values: [] };
+        });
 
-        stockTs.forEach((ts, i) => {
-          const p = stockPrices[i];
+        let indexShares = 0;
+        const indexValue = [];
+        const labels = [];
+
+        indexTs.forEach((ts) => {
           const ip = indexMap.get(ts);
-          if (p == null || ip == null) return;
+          if (ip == null) return;
+
+          const prices = stockSeries.map((s) => s.priceMap.get(ts));
+          if (prices.some((p) => p == null)) return;
 
           if (labels.length === 0) {
-            shares += money / p;
+            stockSeries.forEach((s, idx) => {
+              s.shares += money / prices[idx];
+            });
             indexShares += money / ip;
           }
 
           if (monthly > 0) {
-            shares += monthly / p;
+            stockSeries.forEach((s, idx) => {
+              s.shares += monthly / prices[idx];
+            });
             indexShares += monthly / ip;
           }
 
           labels.push(new Date(ts * 1000).toLocaleDateString(currentLang === "ko" ? "ko-KR" : "en-US"));
-          stockValue.push(shares * p);
+          stockSeries.forEach((s, idx) => {
+            s.values.push(s.shares * prices[idx]);
+          });
           indexValue.push(indexShares * ip);
         });
 
@@ -574,21 +610,31 @@
           throw new Error(currentLang === "ko" ? "겹치는 기간 데이터가 없습니다." : "No overlapping data for selected period.");
         }
 
-        animateChart(type, labels, stockValue, indexValue, stockName, indexLabel);
+        const datasets = stockSeries.map((s) => ({ label: s.name, data: s.values }));
+        datasets.push({ label: indexLabel, data: indexValue });
+        animateChart(type, labels, datasets);
 
-        const lastStock = stockValue[stockValue.length - 1];
-        const lastIndex = indexValue[indexValue.length - 1];
         const totalInvested = money + monthly * labels.length;
-        const stockReturn = ((lastStock - totalInvested) / totalInvested) * 100;
-        const indexReturn = ((lastIndex - totalInvested) / totalInvested) * 100;
+        const lastIndex = indexValue[indexValue.length - 1];
+        const summaryRows = stockSeries.map((s) => {
+          const last = s.values[s.values.length - 1];
+          const ret = ((last - totalInvested) / totalInvested) * 100;
+          return { label: s.name, last, ret };
+        });
+        summaryRows.push({
+          label: indexLabel,
+          last: lastIndex,
+          ret: ((lastIndex - totalInvested) / totalInvested) * 100
+        });
 
-        const winnerName = lastStock >= lastIndex ? stockName : indexLabel;
+        let winner = summaryRows[0];
+        summaryRows.forEach((r) => {
+          if (r.last > winner.last) winner = r;
+        });
 
-        if (currentLang === "ko") {
-          resultEl.textContent = `${t("resultPrefix")}: ${stockName} ${formatNumber(lastStock)} / ${indexLabel} ${formatNumber(lastIndex)} | ${t("returnPrefix")}: ${stockName} ${formatPercent(stockReturn)} / ${indexLabel} ${formatPercent(indexReturn)} (${t("winner")}: ${winnerName})`;
-        } else {
-          resultEl.textContent = `${t("resultPrefix")}: ${stockName} ${formatNumber(lastStock)} / ${indexLabel} ${formatNumber(lastIndex)} | ${t("returnPrefix")}: ${stockName} ${formatPercent(stockReturn)} / ${indexLabel} ${formatPercent(indexReturn)} (${t("winner")}: ${winnerName})`;
-        }
+        const valueText = summaryRows.map((r) => `${r.label} ${formatNumber(r.last)}`).join(" / ");
+        const returnText = summaryRows.map((r) => `${r.label} ${formatPercent(r.ret)}`).join(" / ");
+        resultEl.textContent = `${t("resultPrefix")}: ${valueText} | ${t("principalPrefix")}: ${formatNumber(totalInvested)} | ${t("returnPrefix")}: ${returnText} (${t("winner")}: ${winner.label})`;
       } catch (error) {
         console.error(error);
         resultEl.textContent = "";
