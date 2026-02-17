@@ -29,7 +29,8 @@ export async function onRequestGet(context) {
     if (!isTickerFormat(finalSymbol)) {
       const resolved = await resolveSymbolByMarket(finalSymbol, market, mappings);
       if (!resolved) {
-        return jsonResponse({ error: "Company name not found", query: finalSymbol, market }, 404);
+        const suggestions = await fetchYahooSuggestions(finalSymbol, market);
+        return jsonResponse({ error: "Company name not found", query: finalSymbol, market, suggestions }, 404);
       }
       finalSymbol = resolved;
     }
@@ -168,6 +169,33 @@ async function resolveFromMarketUniverse(candidates, market) {
     }
   }
   return null;
+}
+
+async function fetchYahooSuggestions(query, market) {
+  try {
+    const searchUrl = `https://query1.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=10&newsCount=0`;
+    const response = await fetch(searchUrl, {
+      headers: { "User-Agent": "Mozilla/5.0" }
+    });
+    if (!response.ok) return [];
+    const json = await response.json();
+    const quotes = Array.isArray(json?.quotes) ? json.quotes : [];
+    return quotes
+      .filter((q) => {
+        const s = String(q?.symbol || "").toUpperCase();
+        if (!s) return false;
+        if (market === "kr") return /\.(KS|KQ)$/.test(s);
+        if (market === "us") return !s.includes(".") && (q?.quoteType === "EQUITY" || q?.quoteType === "ETF");
+        return true;
+      })
+      .slice(0, 5)
+      .map((q) => ({
+        symbol: String(q?.symbol || "").toUpperCase(),
+        name: String(q?.shortname || q?.longname || "")
+      }));
+  } catch {
+    return [];
+  }
 }
 
 async function loadKrUniverse() {

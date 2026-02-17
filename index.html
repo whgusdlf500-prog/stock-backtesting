@@ -498,6 +498,7 @@
 
     <section class="comments-card">
       <h3>댓글</h3>
+      <p class="hint">누락되거나 오류가 있는 회사명은 댓글로 남겨주시면 확인 후 매핑에 반영하겠습니다.</p>
       <div id="disqus_thread"></div>
       <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
     </section>
@@ -807,7 +808,21 @@
           const body = await res.text();
 
           if (!res.ok) {
-            lastError = `HTTP ${res.status}: ${body.slice(0, 120)}`;
+            let extra = body.slice(0, 120);
+            try {
+              const errJson = JSON.parse(body);
+              if (Array.isArray(errJson?.suggestions) && errJson.suggestions.length) {
+                const hint = errJson.suggestions
+                  .slice(0, 3)
+                  .map((s) => `${s.name || s.symbol}(${s.symbol})`)
+                  .join(", ");
+                extra = `${errJson.error || "Error"} / 추천: ${hint}`;
+              } else if (errJson?.error) {
+                extra = errJson.error;
+              }
+            } catch (_e) {
+            }
+            lastError = `HTTP ${res.status}: ${extra}`;
             continue;
           }
 
