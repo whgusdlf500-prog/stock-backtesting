@@ -723,6 +723,7 @@
 
     <div class="policy-links">
       <a href="/articles/">분석 아카이브</a>
+      <a href="/admin-mappings.html">매핑 관리자</a>
       <a href="/about.html">사이트 소개</a>
       <a href="/editorial-policy.html">편집 원칙</a>
       <a href="/privacy.html">개인정보처리방침</a>
@@ -735,11 +736,14 @@
     const WORKER_URL = "https://stock-backtesting-gmc.pages.dev";
     const API_ENDPOINTS = ["/api/chart", `${WORKER_URL}/api/chart`].filter(Boolean);
     const MAPPING_JSON_URL = "/company-mappings.json";
+    const MISSING_MAPPING_STORAGE_KEY = "pendingMappingLogsV1";
+    const FORMSPREE_ENDPOINT = "https://formspree.io/f/xaqdjwzq";
     const charts = {};
     const chartTimers = {};
     let currentLang = "ko";
     let companyLabelsBySymbol = {};
     let mappingRowsByMarket = { kr: [], us: [] };
+    const missingLogSeen = new Set();
 
     const I18N = {
       ko: {
@@ -925,6 +929,57 @@
         .replace(/[^0-9a-z\u3131-\u318e\uac00-\ud7a3&.-]/g, "");
     }
 
+    function getPendingLogs() {
+      try {
+        const raw = localStorage.getItem(MISSING_MAPPING_STORAGE_KEY);
+        const parsed = JSON.parse(raw || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function setPendingLogs(items) {
+      try {
+        localStorage.setItem(MISSING_MAPPING_STORAGE_KEY, JSON.stringify(items));
+      } catch (_e) {
+      }
+    }
+
+    function logMissingMapping(payload) {
+      const query = String(payload?.query || "").trim();
+      const market = String(payload?.market || "").toLowerCase();
+      if (!query || !market) return;
+
+      const key = `${market}:${normalizeLookup(query)}`;
+      if (missingLogSeen.has(key)) return;
+      missingLogSeen.add(key);
+
+      const logs = getPendingLogs();
+      if (logs.some((x) => `${x.market}:${normalizeLookup(x.query)}` === key)) return;
+
+      const item = {
+        query,
+        market,
+        suggestions: Array.isArray(payload?.suggestions) ? payload.suggestions.slice(0, 5) : [],
+        source: "auto-backtest-error",
+        created_at: new Date().toISOString()
+      };
+      logs.unshift(item);
+      setPendingLogs(logs.slice(0, 300));
+
+      // Best effort: send to Formspree so operator can collect missing names centrally.
+      try {
+        const fd = new FormData();
+        fd.append("_subject", "미매핑 자동로그");
+        fd.append("name", "mapping-bot");
+        fd.append("email", "noreply@local.invalid");
+        fd.append("message", JSON.stringify(item));
+        fetch(FORMSPREE_ENDPOINT, { method: "POST", body: fd, mode: "no-cors" });
+      } catch (_e) {
+      }
+    }
+
     function buildLookupCandidates(raw) {
       const base = normalizeLookup(raw);
       if (!base) return [];
@@ -1029,6 +1084,9 @@
             let extra = body.slice(0, 120);
             try {
               const errJson = JSON.parse(body);
+              if ((errJson?.error || "").includes("Company name not found")) {
+                logMissingMapping(errJson);
+              }
               if (Array.isArray(errJson?.suggestions) && errJson.suggestions.length) {
                 const hint = errJson.suggestions
                   .slice(0, 3)

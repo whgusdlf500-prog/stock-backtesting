@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>매핑 관리자 | 장기투자연구소</title>
+  <style>
+    body { font-family: "Noto Sans KR", sans-serif; max-width: 980px; margin: 28px auto; padding: 0 16px; color: #0f172a; }
+    h1 { margin-bottom: 8px; }
+    .meta { color: #64748b; font-size: 14px; }
+    .toolbar { display: flex; gap: 8px; flex-wrap: wrap; margin: 14px 0; }
+    button { border: 1px solid #cbd5e1; background: #fff; border-radius: 10px; padding: 8px 12px; font-weight: 700; cursor: pointer; }
+    button:hover { background: #f8fafc; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { border: 1px solid #e2e8f0; padding: 8px; font-size: 13px; text-align: left; vertical-align: top; }
+    th { background: #f8fafc; }
+    .card { border: 1px solid #e2e8f0; border-radius: 12px; padding: 12px; background: #fff; margin-bottom: 10px; }
+    code { background: #f1f5f9; padding: 2px 6px; border-radius: 6px; }
+    a { color: #111827; font-weight: 700; }
+  </style>
+</head>
+<body>
+  <p><a href="/">← 메인으로 돌아가기</a></p>
+  <h1>매핑 관리자 대시보드</h1>
+  <p class="meta">자동 누적된 미매핑 로그를 확인하고 JSON으로 내보낼 수 있습니다.</p>
+
+  <div class="card">
+    <p><strong>로그 출처</strong></p>
+    <ul>
+      <li>기본 파일: <code>/pending-mappings.json</code></li>
+      <li>브라우저 자동로그: <code>localStorage[pendingMappingLogsV1]</code></li>
+      <li>중앙 수집: Formspree 메일함(미매핑 자동로그)</li>
+    </ul>
+  </div>
+
+  <div class="toolbar">
+    <button onclick="refreshLogs()">새로고침</button>
+    <button onclick="downloadMerged()">병합 JSON 다운로드</button>
+    <button onclick="copyMerged()">병합 JSON 복사</button>
+    <button onclick="clearLocal()">로컬 로그 삭제</button>
+  </div>
+
+  <div class="meta" id="summary"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>시장</th>
+        <th>회사명</th>
+        <th>추천 후보</th>
+        <th>발생시각</th>
+      </tr>
+    </thead>
+    <tbody id="rows"></tbody>
+  </table>
+
+  <script>
+    const STORAGE_KEY = "pendingMappingLogsV1";
+    let merged = [];
+
+    async function refreshLogs() {
+      const base = await loadBase();
+      const local = loadLocal();
+      merged = dedupe([...(base.items || []), ...local]);
+      render();
+    }
+
+    async function loadBase() {
+      try {
+        const res = await fetch('/pending-mappings.json', { cache: 'no-store' });
+        if (!res.ok) return { items: [] };
+        return await res.json();
+      } catch {
+        return { items: [] };
+      }
+    }
+
+    function loadLocal() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY);
+        const parsed = JSON.parse(raw || '[]');
+        return Array.isArray(parsed) ? parsed : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function dedupe(items) {
+      const m = new Map();
+      items.forEach((it) => {
+        const market = String(it.market || '').toLowerCase();
+        const query = String(it.query || '').toLowerCase().replace(/\s+/g, '');
+        if (!market || !query) return;
+        const key = `${market}:${query}`;
+        if (!m.has(key)) m.set(key, it);
+      });
+      return Array.from(m.values()).sort((a, b) => String(b.created_at || '').localeCompare(String(a.created_at || '')));
+    }
+
+    function render() {
+      document.getElementById('summary').textContent = `총 ${merged.length}건`;
+      const tbody = document.getElementById('rows');
+      if (!merged.length) {
+        tbody.innerHTML = '<tr><td colspan="5">누적 로그가 없습니다.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = merged.map((it, idx) => {
+        const suggestions = (Array.isArray(it.suggestions) ? it.suggestions : []).map((s) => `${s.name || ''}(${s.symbol || ''})`).join(', ');
+        return `<tr>
+          <td>${idx + 1}</td>
+          <td>${escapeHtml(String(it.market || ''))}</td>
+          <td>${escapeHtml(String(it.query || ''))}</td>
+          <td>${escapeHtml(suggestions)}</td>
+          <td>${escapeHtml(String(it.created_at || ''))}</td>
+        </tr>`;
+      }).join('');
+    }
+
+    function downloadMerged() {
+      const payload = JSON.stringify({ version: 1, items: merged }, null, 2);
+      const blob = new Blob([payload], { type: 'application/json' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'pending-mappings.generated.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }
+
+    async function copyMerged() {
+      const payload = JSON.stringify({ version: 1, items: merged }, null, 2);
+      await navigator.clipboard.writeText(payload);
+      alert('병합 JSON을 클립보드에 복사했습니다.');
+    }
+
+    function clearLocal() {
+      localStorage.removeItem(STORAGE_KEY);
+      refreshLogs();
+    }
+
+    function escapeHtml(s) {
+      return String(s || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    refreshLogs();
+  </script>
+</body>
+</html>
