@@ -1,14 +1,332 @@
-<!doctype html>
-<html lang="en">
+<!DOCTYPE html>
+<html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>개미 백테스트 PRO</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    :root {
+      --bg-1: #00c6ff;
+      --bg-2: #ffdde1;
+      --card-bg: rgba(255, 255, 255, 0.92);
+      --text: #111827;
+      --muted: #4b5563;
+      --btn: #111827;
+      --btn-hover: #1f2937;
+      --line: rgba(0, 0, 0, 0.12);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Pretendard", "Noto Sans KR", sans-serif;
+      color: var(--text);
+      background: linear-gradient(135deg, var(--bg-1), var(--bg-2));
+      padding: 24px 16px 40px;
+    }
+
+    .container {
+      max-width: 980px;
+      margin: 0 auto;
+      background: var(--card-bg);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 18px;
+      padding: 20px;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      text-align: center;
+      font-size: 28px;
+    }
+
+    .tabs {
+      display: flex;
+      gap: 8px;
+      justify-content: center;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .tabs button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 14px;
+      background: #f3f4f6;
+      color: #111827;
+      font-weight: 700;
+      cursor: pointer;
+    }
+
+    .tabs button.active-tab {
+      background: var(--btn);
+      color: white;
+    }
+
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .panel-title {
+      font-size: 20px;
+      margin: 4px 0 12px;
+      text-align: center;
+    }
+
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .form-grid input {
+      width: 100%;
+      border: 1px solid #d1d5db;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      background: #ffffff;
+      color: #111827;
+    }
+
+    .run-row {
+      display: flex;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .run-row button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 16px;
+      background: var(--btn);
+      color: white;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background-color 0.15s ease;
+    }
+
+    .run-row button:hover { background: var(--btn-hover); }
+
+    .hint {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      margin: 0 0 10px;
+    }
+
+    .result {
+      text-align: center;
+      font-weight: 700;
+      margin: 10px 0 8px;
+      min-height: 24px;
+    }
+
+    .chart-wrap {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 10px;
+      background: white;
+    }
+
+    canvas {
+      width: 100%;
+      max-height: 420px;
+    }
+
+    @media (max-width: 700px) {
+      .form-grid { grid-template-columns: 1fr; }
+      h1 { font-size: 24px; }
+    }
+  </style>
 </head>
 <body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
+  <div class="container">
+    <h1>개미 백테스트 PRO</h1>
+
+    <div class="tabs">
+      <button id="tab-us" class="active-tab" onclick="showPage('us')">🇺🇸 서학개미</button>
+      <button id="tab-kr" onclick="showPage('kr')">🇰🇷 동학개미</button>
+    </div>
+
+    <section id="us" class="page active">
+      <h2 class="panel-title">S&P500 비교 (USD)</h2>
+      <div class="form-grid">
+        <input id="usTicker" placeholder="종목 코드 (예: AAPL)">
+        <input type="month" id="usStart">
+        <input type="number" id="usMoney" placeholder="초기 투자금">
+        <input type="number" id="usMonthly" placeholder="월 적립금 (선택)">
+      </div>
+      <div class="run-row">
+        <button onclick="runBacktest('us')">백테스트 실행</button>
+      </div>
+      <p class="hint">지수 비교: ^GSPC (S&P500)</p>
+      <p id="usResult" class="result"></p>
+      <div class="chart-wrap">
+        <canvas id="usChart"></canvas>
+      </div>
+    </section>
+
+    <section id="kr" class="page">
+      <h2 class="panel-title">KOSPI 비교 (KRW)</h2>
+      <div class="form-grid">
+        <input id="krTicker" placeholder="종목 코드/회사명 (예: 005930.KS 또는 삼성전자)">
+        <input type="month" id="krStart">
+        <input type="number" id="krMoney" placeholder="초기 투자금">
+        <input type="number" id="krMonthly" placeholder="월 적립금 (선택)">
+      </div>
+      <div class="run-row">
+        <button onclick="runBacktest('kr')">백테스트 실행</button>
+      </div>
+      <p class="hint">지수 비교: ^KS11 (KOSPI) / 회사명 입력 가능 (예: 삼성전자, LG전자)</p>
+      <p id="krResult" class="result"></p>
+      <div class="chart-wrap">
+        <canvas id="krChart"></canvas>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const WORKER_URL = "https://your-worker-name.workers.dev";
+    const charts = {};
+
+    function showPage(id) {
+      document.querySelectorAll(".page").forEach((page) => page.classList.remove("active"));
+      document.querySelectorAll(".tabs button").forEach((btn) => btn.classList.remove("active-tab"));
+      document.getElementById(id).classList.add("active");
+      document.getElementById(`tab-${id}`).classList.add("active-tab");
+    }
+
+    async function fetchData(symbol, startDate, market) {
+      const from = Math.floor(new Date(startDate + "-01").getTime() / 1000);
+      const to = Math.floor(Date.now() / 1000);
+      const query = `${WORKER_URL}?symbol=${encodeURIComponent(symbol)}&from=${from}&to=${to}&market=${encodeURIComponent(market)}`;
+
+      const res = await fetch(query);
+      if (!res.ok) {
+        throw new Error("데이터 응답 오류");
+      }
+
+      const json = await res.json();
+      const result = json?.chart?.result?.[0];
+      if (!result) {
+        throw new Error("유효한 차트 데이터 없음");
+      }
+      return result;
+    }
+
+    function toFixed2(value) {
+      return Number(value).toLocaleString("ko-KR", { maximumFractionDigits: 2 });
+    }
+
+    async function runBacktest(type) {
+      const ticker = document.getElementById(type + "Ticker").value.trim();
+      const start = document.getElementById(type + "Start").value;
+      const money = parseFloat(document.getElementById(type + "Money").value);
+      const monthly = parseFloat(document.getElementById(type + "Monthly").value || "0");
+      const resultEl = document.getElementById(type + "Result");
+
+      if (!ticker || !start || !money || money <= 0) {
+        alert("종목, 시작월, 초기 투자금을 올바르게 입력하세요.");
+        return;
+      }
+
+      try {
+        resultEl.textContent = "계산 중...";
+
+        const stock = await fetchData(ticker, start, type);
+        const indexSymbol = type === "us" ? "^GSPC" : "^KS11";
+        const index = await fetchData(indexSymbol, start, type);
+        const stockSymbol = stock?.meta?.symbol || ticker.toUpperCase();
+
+        const stockPrices = stock?.indicators?.adjclose?.[0]?.adjclose || [];
+        const indexPrices = index?.indicators?.adjclose?.[0]?.adjclose || [];
+        const stockTs = stock?.timestamp || [];
+        const indexTs = index?.timestamp || [];
+
+        const indexMap = new Map();
+        indexTs.forEach((t, i) => {
+          const p = indexPrices[i];
+          if (p != null) indexMap.set(t, p);
+        });
+
+        let shares = 0;
+        let indexShares = 0;
+        const labels = [];
+        const stockValue = [];
+        const indexValue = [];
+
+        stockTs.forEach((ts, i) => {
+          const p = stockPrices[i];
+          const ip = indexMap.get(ts);
+          if (p == null || ip == null) return;
+
+          if (labels.length === 0) {
+            shares += money / p;
+            indexShares += money / ip;
+          }
+          if (monthly > 0) {
+            shares += monthly / p;
+            indexShares += monthly / ip;
+          }
+
+          labels.push(new Date(ts * 1000).toLocaleDateString("ko-KR"));
+          stockValue.push(shares * p);
+          indexValue.push(indexShares * ip);
+        });
+
+        if (labels.length === 0) {
+          throw new Error("겹치는 기간 데이터가 없습니다.");
+        }
+
+        if (charts[type]) {
+          charts[type].destroy();
+        }
+
+        const ctx = document.getElementById(type + "Chart");
+        charts[type] = new Chart(ctx, {
+          type: "line",
+          data: {
+            labels,
+            datasets: [
+              {
+                label: stockSymbol,
+                data: stockValue,
+                borderWidth: 2,
+                tension: 0.2
+              },
+              {
+                label: indexSymbol,
+                data: indexValue,
+                borderWidth: 2,
+                tension: 0.2
+              }
+            ]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+              legend: { position: "bottom" }
+            }
+          }
+        });
+
+        const lastStock = stockValue[stockValue.length - 1];
+        const lastIndex = indexValue[indexValue.length - 1];
+        const winner = lastStock >= lastIndex ? stockSymbol : indexSymbol;
+        resultEl.textContent = `최종 평가금: ${stockSymbol} ${toFixed2(lastStock)} / ${indexSymbol} ${toFixed2(lastIndex)} (우세: ${winner})`;
+      } catch (error) {
+        console.error(error);
+        resultEl.textContent = "";
+        alert("백테스트 중 오류가 발생했습니다. 종목 코드/워커 URL을 확인하세요.");
+      }
+    }
+  </script>
 </body>
 </html>
