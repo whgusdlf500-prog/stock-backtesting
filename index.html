@@ -216,6 +216,20 @@
       cursor: pointer;
     }
 
+    .comments-card {
+      margin-top: 22px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: #fff;
+      padding: 14px;
+    }
+
+    .comments-card h3 {
+      margin: 0 0 12px;
+      font-size: 18px;
+      text-align: center;
+    }
+
     canvas {
       width: 100%;
       max-height: 420px;
@@ -297,6 +311,12 @@
           <button type="submit">문의 보내기</button>
         </div>
       </form>
+    </section>
+
+    <section class="comments-card">
+      <h3>댓글</h3>
+      <div id="disqus_thread"></div>
+      <noscript>Please enable JavaScript to view the comments powered by Disqus.</noscript>
     </section>
   </div>
 
@@ -716,6 +736,15 @@
 
     applyLanguage();
     loadCompanyMappings();
+  </script>
+  <script>
+    (function() {
+      var d = document;
+      var s = d.createElement("script");
+      s.src = "https://stockking.disqus.com/embed.js";
+      s.setAttribute("data-timestamp", +new Date());
+      (d.head || d.body).appendChild(s);
+    })();
   </script>
 </body>
 </html>
