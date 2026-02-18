@@ -1,1325 +1,1297 @@
 <!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="utf-8"/>
-  <meta name="viewport" content="width=device-width,initial-scale=1"/>
-  <title>퀀트 아케이드 — 게임형 백테스터</title>
-  <meta name="description" content="데이터는 브라우저에서만 처리되는 게임형 백테스터. 전략 룰렛, 등급, 기록, 공유 카드까지."/>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta name="description" content="나는솔로 스타일 세계관 캐릭터 테스트. 10문항 퀴즈로 결과를 확인하고 공유 카드를 만들 수 있습니다. 사진은 브라우저에서만 처리됩니다." />
+  <meta name="robots" content="index,follow" />
+  <title>나는솔로 스타일 캐릭터 테스트</title>
+
+  <!-- 실제 배포 시 ca-pub-xxxxxxxxxxxxxxxx 값으로 변경 -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-0000000000000000" crossorigin="anonymous"></script>
+
   <style>
-    :root{
-      --bg:#070A14;
-      --panel: rgba(255,255,255,.06);
-      --panel2: rgba(255,255,255,.04);
-      --line: rgba(255,255,255,.12);
-      --text:#EAF0FF;
-      --sub:#AAB6D6;
-      --good:#35F0B5;
-      --bad:#FF5B7A;
-      --mid:#6D7CFF;
-      --gold:#FFD36E;
-      --shadow: 0 16px 50px rgba(0,0,0,.45);
-      --r: 20px;
+    :root {
+      --bg: #06101d;
+      --bg2: #0b1a2d;
+      --card: rgba(255, 255, 255, 0.07);
+      --line: rgba(255, 255, 255, 0.16);
+      --text: #eaf3ff;
+      --sub: #b6c7e4;
+      --mint: #6be3c7;
+      --blue: #79a9ff;
+      --amber: #ffd38b;
+      --danger: #ff7f96;
+      --radius: 18px;
+      --shadow: 0 16px 48px rgba(0, 0, 0, 0.38);
     }
-    *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Apple SD Gothic Neo", "Noto Sans KR", Arial;
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Noto Sans KR", "Apple SD Gothic Neo", sans-serif;
       color: var(--text);
       background:
-        radial-gradient(1100px 700px at 15% 0%, rgba(109,124,255,.22), transparent 55%),
-        radial-gradient(900px 700px at 90% 10%, rgba(53,240,181,.16), transparent 55%),
-        radial-gradient(800px 520px at 50% 120%, rgba(255,211,110,.10), transparent 60%),
-        linear-gradient(180deg, var(--bg), #040610 70%);
-      overflow-x:hidden;
+        radial-gradient(900px 500px at 10% 0%, rgba(121, 169, 255, 0.2), transparent 60%),
+        radial-gradient(800px 480px at 90% 15%, rgba(107, 227, 199, 0.16), transparent 55%),
+        linear-gradient(180deg, var(--bg), var(--bg2));
     }
-    a{ color:inherit; }
-    .wrap{ max-width:1200px; margin:0 auto; padding: 18px 16px 34px; }
-    .topbar{
-      display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
-      padding: 14px 14px;
-      border:1px solid var(--line);
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
-      border-radius: var(--r);
+
+    a { color: inherit; }
+
+    .wrap {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 16px;
+    }
+
+    .top {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
       box-shadow: var(--shadow);
+      padding: 14px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
     }
-    .brand{ display:flex; align-items:center; gap:12px; }
-    .logo{
-      width:44px; height:44px; border-radius:14px;
-      background: conic-gradient(from 210deg, rgba(109,124,255,.95), rgba(53,240,181,.90), rgba(255,211,110,.88), rgba(109,124,255,.95));
-      box-shadow: 0 10px 30px rgba(109,124,255,.22);
-      position:relative;
-    }
-    .logo:after{
-      content:"";
-      position:absolute; inset:9px;
-      border-radius:12px;
-      background: rgba(8,10,20,.78);
-      border:1px solid rgba(255,255,255,.10);
-    }
-    .bt{
-      border:1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      color: var(--text);
-      padding: 10px 12px;
-      border-radius: 14px;
-      font-weight:800;
-      cursor:pointer;
-      transition:.15s transform,.15s background,.15s border-color;
-      user-select:none;
-      white-space:nowrap;
-    }
-    .bt:hover{ transform: translateY(-1px); background: rgba(255,255,255,.10); border-color: rgba(255,255,255,.22); }
-    .bt.primary{
-      background: linear-gradient(90deg, rgba(109,124,255,.28), rgba(53,240,181,.18));
-      border-color: rgba(109,124,255,.55);
-    }
-    .bt.gold{
-      background: linear-gradient(90deg, rgba(255,211,110,.28), rgba(109,124,255,.16));
-      border-color: rgba(255,211,110,.52);
-    }
-    .bt.danger{
-      background: rgba(255,91,122,.12);
-      border-color: rgba(255,91,122,.45);
-    }
-    .sub{ color: var(--sub); font-size: 12px; line-height:1.45; margin-top:4px; }
-    h1{ font-size:16px; margin:0; letter-spacing:-.02em; }
-    .grid{
-      margin-top:14px;
-      display:grid; gap:14px;
-      grid-template-columns: 1.2fr .8fr;
-    }
-    @media (max-width: 980px){ .grid{ grid-template-columns: 1fr; } }
 
-    .card{
-      border:1px solid var(--line);
-      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.03));
-      border-radius: var(--r);
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: conic-gradient(from 230deg, #79a9ff, #6be3c7, #ffd38b, #79a9ff);
+      box-shadow: 0 8px 20px rgba(121, 169, 255, 0.35);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 18px;
+      letter-spacing: -0.02em;
+    }
+
+    .sub {
+      margin-top: 4px;
+      color: var(--sub);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    .toolbar {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+      border-radius: 12px;
+      padding: 10px 12px;
+      cursor: pointer;
+      font-weight: 700;
+      transition: transform .15s ease, background .15s ease;
+    }
+
+    .btn:hover { transform: translateY(-1px); background: rgba(255, 255, 255, 0.14); }
+    .btn:disabled { opacity: 0.55; cursor: not-allowed; }
+    .btn.primary { background: linear-gradient(90deg, rgba(121,169,255,.26), rgba(107,227,199,.18)); }
+    .btn.warn { border-color: rgba(255, 127, 150, 0.5); }
+
+    .grid {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: 1.08fr 0.92fr;
+      gap: 14px;
+    }
+
+    @media (max-width: 980px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--card);
       box-shadow: var(--shadow);
-      overflow:hidden;
+      overflow: hidden;
     }
-    .hd{
-      padding: 14px 14px 10px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap;
-      background: linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,.00));
-    }
-    .hd .title{ font-weight:900; font-size:13px; letter-spacing:-.01em; }
-    .hd .hint{ color:var(--sub); font-size:12px; margin-top:6px; line-height:1.45; }
-    .bd{ padding: 14px; }
 
-    .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .col{ display:flex; flex-direction:column; gap:6px; min-width: 180px; }
-    label{ font-size:12px; color:var(--sub); }
-    .in, select, textarea{
-      background: rgba(7,10,20,.62);
-      border:1px solid rgba(255,255,255,.14);
-      color: var(--text);
+    .hd {
+      padding: 14px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .title { font-size: 14px; font-weight: 800; }
+    .hint { color: var(--sub); font-size: 12px; margin-top: 4px; line-height: 1.45; }
+    .bd { padding: 14px; }
+
+    .resultBox {
+      border: 1px solid rgba(255,255,255,0.12);
       border-radius: 14px;
-      padding: 10px 12px;
-      outline:none;
-    }
-    textarea{ min-height: 120px; resize: vertical; }
-    .pill{
-      display:inline-flex; gap:8px; align-items:center;
-      border:1px solid rgba(255,255,255,.12);
-      background: rgba(255,255,255,.06);
-      border-radius: 999px;
-      padding: 6px 10px;
-      font-size: 12px;
-      margin: 6px 6px 0 0;
-    }
-    .dot{ width:9px; height:9px; border-radius:999px; background: var(--good); }
-    .dot.mid{ background: var(--mid); }
-    .dot.gold{ background: var(--gold); }
-
-    .kpi{
-      display:grid; gap:10px;
-      grid-template-columns: repeat(4, 1fr);
-    }
-    @media (max-width: 980px){ .kpi{ grid-template-columns: repeat(2, 1fr); } }
-    .tile{
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(255,255,255,.05);
-      border-radius: 18px;
+      background: rgba(255,255,255,0.05);
       padding: 12px;
     }
-    .tile .t{ color:var(--sub); font-size:11px; }
-    .tile .v{ font-size:16px; font-weight:950; margin-top:6px; letter-spacing:-.02em; }
 
-    canvas{
-      width:100%;
-      height:340px;
-      border-radius: 18px;
-      border:1px solid rgba(255,255,255,.10);
-      background: rgba(4,6,16,.55);
+    .resultTitle {
+      font-size: 22px;
+      line-height: 1.3;
+      margin: 0;
+      letter-spacing: -0.02em;
     }
 
-    .meter{
-      height: 12px;
-      border-radius: 999px;
-      background: rgba(255,255,255,.08);
-      border:1px solid rgba(255,255,255,.10);
-      overflow:hidden;
-    }
-    .meter > div{
-      height:100%;
-      width:0%;
-      background: linear-gradient(90deg, rgba(109,124,255,.9), rgba(53,240,181,.9), rgba(255,211,110,.85));
-      transition: width .12s linear;
+    .row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
     }
 
-    table{ width:100%; border-collapse: collapse; font-size:12px; }
-    th, td{
-      padding: 10px 10px;
-      border-bottom: 1px solid rgba(255,255,255,.08);
-      text-align:left;
-      vertical-align: top;
+    .col {
+      flex: 1;
+      min-width: 220px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
     }
-    th{ color: var(--sub); font-weight:900; }
-    tr:hover td{ background: rgba(255,255,255,.04); }
 
-    .adslot{
-      border:1px dashed rgba(255,255,255,.22);
-      background: rgba(255,255,255,.03);
-      border-radius: 18px;
-      padding: 14px;
+    label {
       color: var(--sub);
       font-size: 12px;
-      line-height:1.5;
     }
-    .adslot b{ color: var(--text); }
 
-    .modal{
-      position:fixed; inset:0;
-      display:none;
-      background: rgba(0,0,0,.55);
-      backdrop-filter: blur(10px);
-      padding: 16px;
-      z-index: 50;
+    .in, select {
+      width: 100%;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      background: rgba(4, 12, 24, 0.75);
+      color: var(--text);
+      padding: 10px;
     }
-    .modal.show{ display:flex; align-items:center; justify-content:center; }
-    .modal .box{
-      width: min(820px, 96vw);
-      border:1px solid rgba(255,255,255,.14);
-      background: linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.03));
-      border-radius: 22px;
-      box-shadow: var(--shadow);
-      overflow:hidden;
+
+    .hide { display: none !important; }
+
+    .qText {
+      font-size: 20px;
+      font-weight: 800;
+      margin: 4px 0 12px;
+      letter-spacing: -0.02em;
     }
-    .modal .box .mh{
-      padding: 14px 14px 10px;
-      border-bottom: 1px solid rgba(255,255,255,.10);
-      display:flex; align-items:flex-start; justify-content:space-between; gap:12px;
+
+    .answers {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
     }
-    .modal .box .mb{ padding: 14px; color: var(--sub); line-height:1.65; font-size: 13px; }
-    .badge{
-      display:inline-flex; align-items:center; gap:8px;
-      font-size:12px; font-weight:950;
-      padding: 6px 10px;
+
+    @media (max-width: 560px) {
+      .answers { grid-template-columns: 1fr; }
+    }
+
+    .ans {
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.05);
+      color: var(--text);
+      padding: 12px;
+      cursor: pointer;
+      text-align: left;
+      font-weight: 700;
+    }
+
+    .ans:hover { background: rgba(255,255,255,0.1); }
+    .ans small { display: block; color: var(--sub); font-weight: 500; margin-top: 6px; }
+
+    .progress {
+      width: 100%;
+      height: 10px;
       border-radius: 999px;
-      border: 1px solid rgba(255,255,255,.14);
-      background: rgba(255,255,255,.06);
-      margin-right: 8px;
+      border: 1px solid rgba(255,255,255,0.13);
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
     }
-    .badge.good{ border-color: rgba(53,240,181,.45); background: rgba(53,240,181,.10); color: var(--good); }
-    .badge.bad{ border-color: rgba(255,91,122,.45); background: rgba(255,91,122,.10); color: var(--bad); }
-    .badge.gold{ border-color: rgba(255,211,110,.50); background: rgba(255,211,110,.10); color: var(--gold); }
-    .tiny{ font-size:12px; color: var(--sub); }
-    .rightStack{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
-    .muted{ color: var(--sub); }
+
+    .progress > div {
+      width: 0;
+      height: 100%;
+      background: linear-gradient(90deg, var(--blue), var(--mint), var(--amber));
+      transition: width .16s ease;
+    }
+
+    .kpi {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 8px;
+    }
+
+    @media (max-width: 560px) {
+      .kpi { grid-template-columns: repeat(2, 1fr); }
+    }
+
+    .tile {
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 14px;
+      background: rgba(255,255,255,0.05);
+      padding: 10px;
+    }
+
+    .tile .t { color: var(--sub); font-size: 12px; }
+    .tile .v { font-weight: 800; font-size: 18px; margin-top: 4px; }
+
+    .badge {
+      display: inline-block;
+      padding: 6px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      margin-right: 6px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .adbox {
+      margin-top: 12px;
+      border: 1px solid rgba(255,255,255,0.16);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.03);
+      padding: 10px;
+      color: var(--sub);
+      font-size: 12px;
+    }
+
+    .adlabel {
+      display: inline-block;
+      margin-bottom: 6px;
+      font-size: 11px;
+      letter-spacing: 0.02em;
+      color: var(--sub);
+    }
+
+    .footnote {
+      margin-top: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 12px;
+      background: rgba(255,255,255,0.04);
+      color: var(--sub);
+      font-size: 12px;
+      line-height: 1.65;
+      padding: 12px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 16px;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.65);
+      border: 1px solid rgba(255,255,255,0.2);
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-size: 12px;
+      display: none;
+      z-index: 20;
+    }
+
+    .toast.show { display: block; }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.56);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      z-index: 30;
+    }
+
+    .modal.show { display: flex; }
+
+    .box {
+      width: min(860px, 96vw);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: rgba(10,20,34,0.98);
+      overflow: hidden;
+    }
+
+    .mh {
+      padding: 12px;
+      border-bottom: 1px solid rgba(255,255,255,0.1);
+      display: flex;
+      justify-content: space-between;
+      gap: 8px;
+      align-items: flex-start;
+    }
+
+    .mb {
+      padding: 12px;
+      color: var(--sub);
+      font-size: 13px;
+      line-height: 1.65;
+    }
+
+    canvas.share {
+      width: 100%;
+      height: auto;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: #081425;
+    }
+
+    .links {
+      margin-top: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--sub);
+    }
+
+    .faq {
+      margin-top: 12px;
+      border-top: 1px solid rgba(255,255,255,0.12);
+      padding-top: 10px;
+    }
+
+    .faq h3 { margin: 0 0 8px; font-size: 14px; }
+    .faq p { margin: 0 0 8px; color: var(--sub); font-size: 13px; line-height: 1.6; }
   </style>
 </head>
 <body>
   <div class="wrap">
-    <div class="topbar">
+    <header class="top">
       <div class="brand">
         <div class="logo" aria-hidden="true"></div>
         <div>
-          <h1>퀀트 아케이드 <span class="muted">— 게임형 백테스터</span></h1>
-          <div class="sub">✅ 서버는 <b>광고+UI만</b> 제공 · ✅ 가격 데이터는 <b>브라우저에서만</b> 처리 · ✅ “룰렛→등급→기록→공유” 루프로 체류시간 극대화</div>
+          <h1>나는솔로 스타일 캐릭터 테스트</h1>
+          <div class="sub">
+            예능 세계관을 모티브로 만든 오락용 성향 테스트입니다. 실제 방송/출연자와 무관하며 결과는 재미를 위한 안내입니다.
+          </div>
         </div>
       </div>
-      <div class="rightStack">
-        <button class="bt" id="btnHow">사용법</button>
-        <button class="bt gold" id="btnShare">공유 카드 만들기</button>
-        <button class="bt danger" id="btnReset">로컬 데이터 초기화</button>
+      <div class="toolbar">
+        <button type="button" class="btn" id="btnHow">사용 안내</button>
+        <button type="button" class="btn" id="btnOpenShare" disabled>공유 카드</button>
+        <button type="button" class="btn warn" id="btnReset">기록 초기화</button>
       </div>
+    </header>
+
+    <div class="adbox" aria-label="상단 광고">
+      <span class="adlabel">광고</span>
+      <ins class="adsbygoogle"
+           style="display:block"
+           data-ad-client="ca-pub-0000000000000000"
+           data-ad-slot="1111111111"
+           data-ad-format="auto"
+           data-full-width-responsive="true"></ins>
     </div>
 
-    <div style="margin-top:14px;" class="adslot">
-      <b>광고 슬롯 (상단)</b><br/>
-      Adsense 코드 삽입 위치. (상단은 RPM에 유리 / 단, 콘텐츠 경험을 해치지 않게 높이 제한 권장)
-    </div>
-
-    <div class="grid">
-      <section class="card">
+    <main class="grid">
+      <section class="card" aria-label="테스트 영역">
         <div class="hd">
           <div>
-            <div class="title">🎮 1) 플레이 시작 (CSV 없어도 바로 가능)</div>
-            <div class="hint">
-              <span class="pill"><span class="dot gold"></span>즉시 플레이: <b>데모(합성 데이터)</b></span>
-              <span class="pill"><span class="dot mid"></span>실데이터: <b>복붙</b> 또는 <b>CSV</b></span>
-              <span class="pill"><span class="dot"></span>결과는 <b>등급</b>으로 연출</span>
-            </div>
+            <div class="title">테스트 진행</div>
+            <div class="hint">10문항을 선택하면 성향 점수와 캐릭터 설명을 보여줍니다.</div>
           </div>
-          <div class="row">
-            <button class="bt" id="btnDemo">데모로 즉시 플레이</button>
-            <button class="bt primary" id="btnSpin">🎲 전략 룰렛</button>
-            <button class="bt gold" id="btnRun">🚀 백테스트</button>
+          <div class="toolbar">
+            <button type="button" class="btn primary" id="btnStart">시작하기</button>
+            <button type="button" class="btn" id="btnRandom">랜덤 강화</button>
+            <button type="button" class="btn" id="btnRestart" disabled>다시하기</button>
           </div>
         </div>
 
         <div class="bd">
-          <div class="row">
-            <div class="col" style="min-width:260px;">
-              <label>세션 이름 (기록/공유에 표시)</label>
-              <input class="in" id="sessionName" placeholder="예: AAPL / 삼성전자 / 내 전략 실험" />
-            </div>
-            <div class="col">
-              <label>모드</label>
-              <select id="mode">
-                <option value="DEMO">데모(합성 데이터, 즉시 실행)</option>
-                <option value="PASTE">복붙(표/CSV 텍스트 붙여넣기)</option>
-                <option value="CSV">CSV 업로드</option>
-              </select>
-            </div>
-            <div class="col">
-              <label>데이터 캐시</label>
-              <select id="cacheMode">
-                <option value="ON">ON (다음에 더 빠름)</option>
-                <option value="OFF">OFF</option>
-              </select>
-            </div>
-            <div class="col">
-              <label>속도</label>
-              <select id="speed">
-                <option value="FAST">빠름(광고 노출 루프 유리)</option>
-                <option value="SHOW">연출(차트 재생)</option>
-              </select>
-            </div>
-          </div>
+          <div id="viewLanding">
+            <div class="resultBox">
+              <h2 class="resultTitle">오늘의 캐릭터를 확인해보세요</h2>
+              <p class="sub" style="margin-top:8px;">
+                질문 답변 + 랜덤 가중치를 조합해 결과를 생성합니다. 같은 사람이 다시 해도 약간 다른 버전이 나올 수 있습니다.
+              </p>
 
-          <div style="margin-top:12px;" id="inputArea"></div>
-
-          <div style="margin-top:12px;">
-            <div class="row" style="justify-content:space-between;">
-              <div class="row">
-                <span class="pill"><span class="dot"></span>종가</span>
-                <span class="pill"><span class="dot mid"></span>지표(전략)</span>
-                <span class="pill"><span class="dot gold"></span>등급/기록</span>
+              <div class="row" style="margin-top:10px;">
+                <div class="col">
+                  <label for="nickname">닉네임(선택)</label>
+                  <input class="in" id="nickname" maxlength="18" placeholder="예: 오늘의 나" />
+                </div>
+                <div class="col">
+                  <label for="photoInput">사진(선택, 공유 카드 장식용)</label>
+                  <input class="in" id="photoInput" type="file" accept="image/png,image/jpeg,image/webp" />
+                </div>
               </div>
-              <div class="tiny">※ 데이터는 이 페이지에서만 처리되며 서버로 전송되지 않도록 설계됨</div>
+
+              <div class="row" style="margin-top:10px;">
+                <button type="button" class="btn primary" id="btnStart2">퀴즈 시작</button>
+                <button type="button" class="btn" id="btnSkip">빠른 결과</button>
+              </div>
+            </div>
+
+            <div class="footnote">
+              사진 파일은 브라우저 메모리에서만 사용되며 서버로 업로드하지 않습니다. 파일 크기는 5MB 이하만 허용됩니다.
             </div>
           </div>
 
-          <div style="margin-top:12px;">
-            <div class="meter" aria-label="simulation progress"><div id="prog"></div></div>
+          <div id="viewQuiz" class="hide">
+            <div class="row" style="justify-content:space-between;">
+              <strong><span id="qIndex">1</span> / <span id="qTotal">10</span></strong>
+              <span class="sub">진행률</span>
+            </div>
+            <div class="progress" aria-label="퀴즈 진행률"><div id="qProg"></div></div>
+
+            <div class="qText" id="qText">질문</div>
+            <div class="answers" id="answers"></div>
+
+            <div class="adbox" id="adMid" aria-label="중간 광고" style="display:none;">
+              <span class="adlabel">광고</span>
+              <ins class="adsbygoogle"
+                   style="display:block"
+                   data-ad-client="ca-pub-0000000000000000"
+                   data-ad-slot="2222222222"
+                   data-ad-format="auto"
+                   data-full-width-responsive="true"></ins>
+            </div>
           </div>
 
-          <div style="margin-top:12px;">
-            <canvas id="chart" width="1200" height="620"></canvas>
-          </div>
+          <div id="viewResult" class="hide">
+            <div class="resultBox">
+              <div id="resultBadges" style="margin-bottom:8px;"></div>
+              <h2 class="resultTitle" id="resultTitle">결과</h2>
+              <p class="sub" id="resultSubtitle">설명</p>
 
-          <div style="margin-top:12px;" class="kpi">
-            <div class="tile"><div class="t">등급</div><div class="v" id="kGrade">-</div></div>
-            <div class="tile"><div class="t">총 수익률</div><div class="v" id="kRet">-</div></div>
-            <div class="tile"><div class="t">최대낙폭(MDD)</div><div class="v" id="kMdd">-</div></div>
-            <div class="tile"><div class="t">오늘 최고</div><div class="v" id="kBest">-</div></div>
-          </div>
+              <div class="kpi">
+                <div class="tile"><div class="t">혼돈지수</div><div class="v" id="kChaos">-</div></div>
+                <div class="tile"><div class="t">호감도</div><div class="v" id="kLike">-</div></div>
+                <div class="tile"><div class="t">대화력</div><div class="v" id="kTalk">-</div></div>
+                <div class="tile"><div class="t">분위기</div><div class="v" id="kVibe">-</div></div>
+              </div>
 
-          <div style="margin-top:14px;" class="adslot">
-            <b>광고 슬롯 (중간)</b><br/>
-            결과 확인 후 시선이 내려오는 지점. “룰렛→실행→결과” 반복 루프에서 반복 노출이 잘 됩니다.
-          </div>
+              <div class="footnote" id="resultTips"></div>
 
+              <div class="adbox" aria-label="결과 광고">
+                <span class="adlabel">광고</span>
+                <ins class="adsbygoogle"
+                     style="display:block"
+                     data-ad-client="ca-pub-0000000000000000"
+                     data-ad-slot="3333333333"
+                     data-ad-format="auto"
+                     data-full-width-responsive="true"></ins>
+              </div>
+
+              <div class="row" style="margin-top:10px;">
+                <button type="button" class="btn primary" id="btnTryAgain">다시하기</button>
+                <button type="button" class="btn" id="btnMakeShare">공유 카드 만들기</button>
+                <button type="button" class="btn" id="btnCopyText">결과 문구 복사</button>
+              </div>
+            </div>
+          </div>
         </div>
       </section>
 
-      <aside class="card">
+      <aside class="card" aria-label="설정 및 안내">
         <div class="hd">
           <div>
-            <div class="title">🧠 2) 전략 & 기록 (중독 루프)</div>
-            <div class="hint">룰렛으로 전략을 바꾸고, 기록을 깨고, 공유 카드로 퍼뜨리는 구조.</div>
-          </div>
-          <div class="row">
-            <button class="bt" id="btnAI">🤖 AI 추천</button>
-            <button class="bt" id="btnSave">기록 저장</button>
+            <div class="title">설정</div>
+            <div class="hint">강도와 랜덤 비율을 조정해 결과 다양성을 바꿀 수 있습니다.</div>
           </div>
         </div>
         <div class="bd">
-          <div class="row">
-            <div class="col">
-              <label>전략 프리셋</label>
-              <select id="preset"></select>
-            </div>
-            <div class="col">
-              <label>초기자본</label>
-              <input class="in" id="cash" type="number" value="1000000" min="1" step="1"/>
-            </div>
-          </div>
-          <div class="row" style="margin-top:10px;">
-            <div class="col">
-              <label>거래비용(왕복, %)</label>
-              <input class="in" id="fee" type="number" value="0.10" min="0" step="0.01"/>
-            </div>
-            <div class="col">
-              <label>슬리피지(편도, %)</label>
-              <input class="in" id="slip" type="number" value="0.03" min="0" step="0.01"/>
-            </div>
+          <div class="col">
+            <label for="memeLevel">표현 강도</label>
+            <select id="memeLevel" class="in">
+              <option value="SAFE">안전</option>
+              <option value="SPICY" selected>기본</option>
+              <option value="CHAOS">강함</option>
+            </select>
           </div>
 
-          <div style="margin-top:10px;" class="row">
-            <div class="col" style="min-width: 100%;">
-              <label>전략 설명</label>
-              <div class="adslot" id="presetDesc" style="border-style:solid; border-color: rgba(255,255,255,.10);">-</div>
-            </div>
+          <div class="col" style="margin-top:10px;">
+            <label for="randMix">랜덤 비율</label>
+            <select id="randMix" class="in">
+              <option value="20">20%</option>
+              <option value="30" selected>30%</option>
+              <option value="40">40%</option>
+            </select>
           </div>
 
-          <div style="margin-top:12px; grid-template-columns: repeat(2, 1fr);" class="kpi">
-            <div class="tile"><div class="t">거래 수</div><div class="v" id="kTrades">-</div></div>
-            <div class="tile"><div class="t">승률</div><div class="v" id="kWin">-</div></div>
+          <div class="footnote" style="margin-top:12px;">
+            <strong>운영 기준</strong><br />
+            1) 사람을 비하하거나 민감 속성을 판단하는 문항은 제외합니다.<br />
+            2) 결과는 오락용 문구로만 제공하며 의학·법률·재정 조언을 하지 않습니다.<br />
+            3) 광고와 콘텐츠 영역을 명확히 구분합니다.
           </div>
 
-          <div style="margin-top:12px;">
-            <div class="row" style="justify-content:space-between;">
-              <div class="title" style="font-size:13px; font-weight:950;">📜 거래 로그</div>
-              <button class="bt" id="btnExport">거래내역 CSV</button>
-            </div>
-            <div style="margin-top:10px; max-height: 360px; overflow:auto;">
-              <table>
-                <thead>
-                  <tr>
-                    <th style="width:110px;">일자</th>
-                    <th>이벤트</th>
-                    <th style="width:110px;">가격</th>
-                    <th style="width:120px;">자산</th>
-                  </tr>
-                </thead>
-                <tbody id="log">
-                  <tr><td colspan="4" class="muted">아직 실행 전. 룰렛 돌리고 🚀 눌러봐.</td></tr>
-                </tbody>
-              </table>
-            </div>
+          <div class="faq">
+            <h3>자주 묻는 질문</h3>
+            <p><strong>Q.</strong> 결과가 매번 같은가요?<br /><strong>A.</strong> 문항 점수에 랜덤 가중치가 더해져 비슷하지만 약간 다른 결과가 나올 수 있습니다.</p>
+            <p><strong>Q.</strong> 사진은 어디에 저장되나요?<br /><strong>A.</strong> 공유 카드 렌더링에만 사용되며 서버 업로드를 하지 않습니다.</p>
           </div>
 
-          <div style="margin-top:12px;" class="adslot">
-            <b>광고 슬롯 (사이드/하단)</b><br/>
-            롱테일 체류에 유리. 로그 스크롤 중에도 자연스럽게 노출됩니다.
-          </div>
-
-          <div style="margin-top:12px;" class="tiny">
-            <span class="badge">⚖️ 법적 리스크 최소 설계</span>
-            <div class="muted">
-              본 서비스는 투자자문이 아니며, 사용자가 입력/가져온 데이터로 브라우저에서 계산하는 도구입니다.
-              시장 데이터는 서버에 저장/제공되지 않도록 설계되었습니다.
-            </div>
-          </div>
+          <nav class="links" aria-label="정책 링크">
+            <a href="/about.html">사이트 소개</a>
+            <a href="/editorial-policy.html">편집 원칙</a>
+            <a href="/privacy.html">개인정보처리방침</a>
+            <a href="/terms.html">이용약관</a>
+          </nav>
         </div>
       </aside>
-    </div>
+    </main>
   </div>
 
-  <div class="modal" id="mHow">
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <div class="modal" id="mHow" aria-hidden="true">
     <div class="box">
       <div class="mh">
         <div>
-          <div style="font-weight:950;">사용법 (이탈 최소 루트)</div>
-          <div class="tiny">1) 데모로 재미 먼저 → 2) 실데이터는 “복붙”이 제일 편함 → 3) 기록/공유로 반복</div>
+          <strong>사용 안내</strong>
+          <div class="sub">1) 시작하기 2) 문항 선택 3) 결과 확인 4) 공유 카드 저장</div>
         </div>
-        <button class="bt" data-close="#mHow">닫기</button>
+        <button type="button" class="btn" data-close="#mHow">닫기</button>
       </div>
       <div class="mb">
-        <div class="badge gold">추천 루트</div>
-        <b>데모(합성)</b>로 즉시 플레이 → 전략 룰렛 → 등급/기록 → 재미 붙으면 <b>복붙(표/CSV 텍스트)</b>로 실데이터 전환.<br/><br/>
-        <div class="badge good">복붙 팁</div>
-        주가 표를 “복사(클립보드)”해서 붙여넣으면 됩니다. 아래 형식이면 OK:<br/>
-        <div class="adslot" style="border-style:solid; border-color: rgba(255,255,255,.10); margin-top:8px;">
-          date,close<br/>
-          2024-01-02,104<br/>
-          2024-01-03,102
-        </div><br/>
-        <div class="badge">리스크 최소화</div>
-        서버가 가격 데이터를 저장/배포하지 않고, 브라우저에서만 처리되도록 설계했습니다.
+        본 페이지는 오락용 테스트입니다. 실제 인물/방송과 관련이 없으며, 결과는 재미를 위한 설명입니다.
       </div>
     </div>
   </div>
 
-  <div class="modal" id="mShare">
+  <div class="modal" id="mShare" aria-hidden="true">
     <div class="box">
       <div class="mh">
         <div>
-          <div style="font-weight:950;">공유 카드 (바이럴 장치)</div>
-          <div class="tiny">결과를 이미지처럼 저장/공유하면 유입이 늘고, Adsense 수익이 같이 커집니다.</div>
+          <strong>공유 카드</strong>
+          <div class="sub">PNG 파일로 저장할 수 있습니다.</div>
         </div>
-        <button class="bt" data-close="#mShare">닫기</button>
+        <button type="button" class="btn" data-close="#mShare">닫기</button>
       </div>
       <div class="mb">
-        <canvas id="shareCanvas" width="1200" height="630" style="width:100%; height:auto; border-radius:18px; border:1px solid rgba(255,255,255,.10); background: rgba(4,6,16,.55);"></canvas>
+        <canvas class="share" id="shareCanvas" width="1200" height="630"></canvas>
         <div class="row" style="margin-top:10px;">
-          <button class="bt gold" id="btnCopyShare">이미지로 저장(다운로드)</button>
-          <span class="tiny muted">※ 브라우저 다운로드로 저장됩니다.</span>
+          <button type="button" class="btn" id="btnDownloadShare">이미지 저장</button>
+          <button type="button" class="btn" id="btnCopyShareText">공유 문구 복사</button>
         </div>
       </div>
     </div>
   </div>
 
-<script>
-const $ = (s)=>document.querySelector(s);
-const $$ = (s)=>Array.from(document.querySelectorAll(s));
+  <script>
+    const $ = (s) => document.querySelector(s);
+    const $$ = (s) => Array.from(document.querySelectorAll(s));
 
-const els = {
-  mode: $("#mode"),
-  cacheMode: $("#cacheMode"),
-  speed: $("#speed"),
-  inputArea: $("#inputArea"),
-  sessionName: $("#sessionName"),
-  preset: $("#preset"),
-  presetDesc: $("#presetDesc"),
-  cash: $("#cash"),
-  fee: $("#fee"),
-  slip: $("#slip"),
-  prog: $("#prog"),
+    const LS_BEST = "nsol_best_today_v2";
+    const LS_LAST = "nsol_last_result_v2";
+    const TODAY = new Date().toISOString().slice(0, 10);
 
-  btnHow: $("#btnHow"),
-  btnDemo: $("#btnDemo"),
-  btnSpin: $("#btnSpin"),
-  btnAI: $("#btnAI"),
-  btnRun: $("#btnRun"),
-  btnSave: $("#btnSave"),
-  btnShare: $("#btnShare"),
-  btnReset: $("#btnReset"),
-  btnExport: $("#btnExport"),
+    const els = {
+      viewLanding: $("#viewLanding"),
+      viewQuiz: $("#viewQuiz"),
+      viewResult: $("#viewResult"),
+      btnHow: $("#btnHow"),
+      btnOpenShare: $("#btnOpenShare"),
+      btnReset: $("#btnReset"),
+      btnStart: $("#btnStart"),
+      btnStart2: $("#btnStart2"),
+      btnSkip: $("#btnSkip"),
+      btnRandom: $("#btnRandom"),
+      btnRestart: $("#btnRestart"),
+      btnTryAgain: $("#btnTryAgain"),
+      btnMakeShare: $("#btnMakeShare"),
+      btnCopyText: $("#btnCopyText"),
+      nickname: $("#nickname"),
+      photoInput: $("#photoInput"),
+      memeLevel: $("#memeLevel"),
+      randMix: $("#randMix"),
+      qIndex: $("#qIndex"),
+      qTotal: $("#qTotal"),
+      qProg: $("#qProg"),
+      qText: $("#qText"),
+      answers: $("#answers"),
+      resultBadges: $("#resultBadges"),
+      resultTitle: $("#resultTitle"),
+      resultSubtitle: $("#resultSubtitle"),
+      resultTips: $("#resultTips"),
+      kChaos: $("#kChaos"),
+      kLike: $("#kLike"),
+      kTalk: $("#kTalk"),
+      kVibe: $("#kVibe"),
+      toast: $("#toast"),
+      mHow: $("#mHow"),
+      mShare: $("#mShare"),
+      shareCanvas: $("#shareCanvas"),
+      btnDownloadShare: $("#btnDownloadShare"),
+      btnCopyShareText: $("#btnCopyShareText"),
+    };
 
-  chart: $("#chart"),
-  log: $("#log"),
+    const QUESTIONS = [
+      { q: "처음 만남에서 나의 기본 모드는?", a: [
+        { t: "차분하게 분위기를 본다", s: { vibe: 2, like: 1 } },
+        { t: "대화를 주도하며 아이스브레이킹", s: { talk: 2, chaos: 1 } },
+        { t: "상대 말에 리액션을 크게 준다", s: { like: 2, talk: 1 } },
+        { t: "적응 후 천천히 내 스타일을 꺼낸다", s: { vibe: 1, chaos: 1 } },
+      ]},
+      { q: "호감이 생기면 보통 어떻게 행동하나요?", a: [
+        { t: "솔직하게 표현한다", s: { talk: 1, chaos: 2 } },
+        { t: "상대 속도에 맞춘다", s: { like: 2, vibe: 1 } },
+        { t: "대화로 공감대를 먼저 만든다", s: { talk: 2, like: 1 } },
+        { t: "신중하게 관찰한다", s: { vibe: 2 } },
+      ]},
+      { q: "갈등이 생겼을 때 가장 가까운 대응은?", a: [
+        { t: "바로 대화를 제안한다", s: { talk: 2, like: 1 } },
+        { t: "시간을 두고 정리한다", s: { vibe: 2 } },
+        { t: "핵심만 짧게 전달한다", s: { talk: 1, chaos: 1 } },
+        { t: "상대 감정을 먼저 챙긴다", s: { like: 2 } },
+      ]},
+      { q: "단체 대화방에서 나의 포지션은?", a: [
+        { t: "분위기 메이커", s: { chaos: 2, talk: 1 } },
+        { t: "요약 정리 담당", s: { talk: 2, vibe: 1 } },
+        { t: "필요할 때만 정확히 답한다", s: { vibe: 2 } },
+        { t: "공감 리액션 담당", s: { like: 2 } },
+      ]},
+      { q: "플러팅 스타일에 가까운 것은?", a: [
+        { t: "말로 자연스럽게 호감 표시", s: { talk: 2 } },
+        { t: "배려 행동으로 보여준다", s: { like: 2 } },
+        { t: "분위기와 표정으로 전달", s: { vibe: 2 } },
+        { t: "가볍고 유쾌하게 직진", s: { chaos: 2, talk: 1 } },
+      ]},
+      { q: "약속 장소를 정할 때 나는?", a: [
+        { t: "후보를 여러 개 제시", s: { talk: 2, vibe: 1 } },
+        { t: "상대 취향을 먼저 묻는다", s: { like: 2 } },
+        { t: "분위기 좋은 곳 하나를 고른다", s: { vibe: 2 } },
+        { t: "가볍고 새로운 곳 시도", s: { chaos: 2 } },
+      ]},
+      { q: "상대에게 가장 강조하고 싶은 내 매력은?", a: [
+        { t: "대화가 편하다는 점", s: { talk: 2, like: 1 } },
+        { t: "배려와 안정감", s: { like: 2, vibe: 1 } },
+        { t: "분위기와 감각", s: { vibe: 2 } },
+        { t: "재미와 에너지", s: { chaos: 2 } },
+      ]},
+      { q: "주말 데이트를 고른다면?", a: [
+        { t: "대화 중심 카페/전시", s: { talk: 2, vibe: 1 } },
+        { t: "편안한 산책과 식사", s: { like: 2 } },
+        { t: "사진이 잘 나오는 장소", s: { vibe: 2 } },
+        { t: "즉흥 코스 투어", s: { chaos: 2, talk: 1 } },
+      ]},
+      { q: "연락 템포는 보통 어떤 편인가요?", a: [
+        { t: "빠르게 답장하는 편", s: { talk: 1, chaos: 1 } },
+        { t: "상대 흐름에 맞춘다", s: { like: 2 } },
+        { t: "생각 정리 후 답장", s: { vibe: 2 } },
+        { t: "짧고 핵심적으로 답장", s: { talk: 2 } },
+      ]},
+      { q: "오늘의 나를 한 줄로 표현하면?", a: [
+        { t: "차분하지만 존재감 있는 타입", s: { vibe: 2 } },
+        { t: "대화로 분위기를 이끄는 타입", s: { talk: 2 } },
+        { t: "배려와 공감이 강점인 타입", s: { like: 2 } },
+        { t: "유쾌하고 변수가 있는 타입", s: { chaos: 2 } },
+      ]},
+    ];
 
-  kGrade: $("#kGrade"),
-  kRet: $("#kRet"),
-  kMdd: $("#kMdd"),
-  kTrades: $("#kTrades"),
-  kWin: $("#kWin"),
-  kBest: $("#kBest"),
+    const CHARACTERS = [
+      { id: "YS_PRO", label: "프로형 영수", base: "영수", profile: "대화 구조를 잘 만들고 흐름을 잡는 타입", need: "핵심을 짧게 정리하면 더 강해져요.", good: ["주도력", "설득력"], bad: ["장황해질 수 있음"], keyDims: { talk: 2, vibe: 1 } },
+      { id: "YH_SAFE", label: "안정형 영호", base: "영호", profile: "속도 조절과 신뢰 구축이 강점인 타입", need: "가끔은 먼저 제안해도 좋아요.", good: ["신중함", "신뢰"], bad: ["기회가 늦어질 수 있음"], keyDims: { like: 2, vibe: 1 } },
+      { id: "OS_AURA", label: "아우라형 옥순", base: "옥순", profile: "분위기와 감각으로 인상을 남기는 타입", need: "의도를 말로 한 번 더 설명해보세요.", good: ["존재감", "감각"], bad: ["거리감으로 보일 수 있음"], keyDims: { vibe: 2, like: 1 } },
+      { id: "YC_CARE", label: "케어형 영철", base: "영철", profile: "상대 감정을 읽고 안정적으로 반응하는 타입", need: "내 취향도 분명히 표현해보세요.", good: ["공감", "배려"], bad: ["자기표현 부족"], keyDims: { like: 2, talk: 1 } },
+      { id: "SJ_SPICY", label: "에너지형 순자", base: "순자", profile: "유쾌하고 빠른 템포로 분위기를 띄우는 타입", need: "속도 조절을 하면 호감도가 더 올라갑니다.", good: ["유쾌함", "활동성"], bad: ["급하게 보일 수 있음"], keyDims: { chaos: 2, talk: 1 } },
+      { id: "HS_SOFT", label: "무해형 현숙", base: "현숙", profile: "편안하고 안정적인 대화가 강한 타입", need: "인상 깊은 포인트를 하나 추가해보세요.", good: ["편안함", "안정감"], bad: ["임팩트 부족"], keyDims: { like: 2 } },
+    ];
 
-  mHow: $("#mHow"),
-  mShare: $("#mShare"),
-  shareCanvas: $("#shareCanvas"),
-  btnCopyShare: $("#btnCopyShare"),
-};
+    let STATE = {
+      modeRandom: false,
+      quiz: null,
+      idx: 0,
+      scores: {},
+      answers: [],
+      lastResult: null,
+      photoDataUrl: null,
+    };
 
-let STATE = {
-  bars: [],
-  equity: [],
-  trades: [],
-  result: null,
-  lastStrategy: null,
-  bestToday: null,
-};
-
-const LS_KEY = "qa_best_today_v1";
-const LS_CACHE = "qa_cached_dataset_v1";
-const TODAY = new Date().toISOString().slice(0,10);
-
-function loadBest(){
-  try{
-    const raw = localStorage.getItem(LS_KEY);
-    if(!raw) return null;
-    const obj = JSON.parse(raw);
-    if(obj?.day !== TODAY) return null;
-    return obj;
-  } catch { return null; }
-}
-function saveBest(obj){
-  localStorage.setItem(LS_KEY, JSON.stringify(obj));
-}
-function wipeAll(){
-  localStorage.removeItem(LS_KEY);
-  localStorage.removeItem(LS_CACHE);
-}
-
-const PRESETS = [
-  { id:"MA_20_60", name:"MA 크로스 (20/60)", desc:"빠른선이 느린선을 위로 돌파하면 매수, 아래로 내려가면 매도. 가장 직관적인 전략.", type:"MA", p:{s:20,l:60} },
-  { id:"MA_10_30", name:"MA 크로스 (10/30) — 공격적", desc:"짧은 MA로 신호가 많아 게임성이 큼. 대신 흔들릴 확률도 증가.", type:"MA", p:{s:10,l:30} },
-  { id:"MOM_120", name:"모멘텀 (120일) — 추세추종", desc:"최근 120일 수익률이 0보다 크면 보유, 아니면 현금. 단순하지만 강력한 타입.", type:"MOM", p:{n:120} },
-  { id:"RSI_14_REV", name:"RSI 반전 (14) — 반등 사냥", desc:"RSI가 낮을 때(과매도) 진입, 높을 때(과매수) 청산. 성향이 정반대라 비교 재미가 큼.", type:"RSI", p:{n:14, buy:30, sell:65} },
-  { id:"BREAK_55", name:"돌파 (55일) — 터지면 간다", desc:"최근 55일 고점 돌파 시 매수, 20일 저점 이탈 시 청산. ‘대박/쪽박’ 연출에 최고.", type:"BREAK", p:{hi:55, lo:20} },
-];
-
-function setPresets(){
-  els.preset.innerHTML = "";
-  for(const p of PRESETS){
-    const opt = document.createElement("option");
-    opt.value = p.id;
-    opt.textContent = p.name;
-    els.preset.appendChild(opt);
-  }
-  els.preset.value = PRESETS[0].id;
-  updatePresetDesc();
-}
-function getPreset(){ return PRESETS.find(x=>x.id===els.preset.value) || PRESETS[0]; }
-function updatePresetDesc(){ const p = getPreset(); els.presetDesc.textContent = p.desc; STATE.lastStrategy = p; }
-
-function renderInputArea(){
-  const m = els.mode.value;
-  if(m === "DEMO"){
-    els.inputArea.innerHTML = `<div class="adslot" style="border-style:solid; border-color: rgba(255,255,255,.10);"><b>데모(합성 데이터)</b><br/>지금 바로 플레이용. 실제 시장 데이터를 제공하지 않아서 법적/운영 리스크를 낮추고, 사용자는 재미를 먼저 느낍니다.</div>`;
-    return;
-  }
-  if(m === "PASTE"){
-    els.inputArea.innerHTML = `<div class="row"><div class="col" style="min-width: 100%;"><label>붙여넣기 (date, close) — 표를 복사해서 그대로 붙여도 됨</label><textarea id="pasteBox" class="in" placeholder="date,close&#10;2024-01-02,104&#10;2024-01-03,102"></textarea><div class="row" style="margin-top:8px;"><button class="bt" id="btnPasteLoad">붙여넣기 데이터 로드</button><button class="bt" id="btnPasteExample">예시 넣기</button><span class="tiny muted">※ 서버 전송 없음(브라우저 처리)</span></div></div></div>`;
-    $("#btnPasteLoad").addEventListener("click", ()=> loadFromPaste($("#pasteBox").value));
-    $("#btnPasteExample").addEventListener("click", ()=>{
-      $("#pasteBox").value = ["date,close","2024-01-02,100","2024-01-03,101","2024-01-04,99","2024-01-05,103","2024-01-08,104","2024-01-09,102"].join("\n");
-    });
-    return;
-  }
-  els.inputArea.innerHTML = `<div class="adslot" style="border-style:solid; border-color: rgba(255,255,255,.10);"><b>CSV 업로드 (옵션)</b><br/>최소 컬럼: <span style="font-family:ui-monospace;">date,close</span><br/><div class="row" style="margin-top:10px;"><input type="file" id="csvFile" accept=".csv,text/csv" class="in" style="padding:10px;"/><button class="bt" id="btnCsvLoad">업로드 로드</button></div></div>`;
-  $("#btnCsvLoad").addEventListener("click", async ()=>{
-    const f = $("#csvFile").files?.[0];
-    if(!f) return alert("CSV 파일을 선택해줘.");
-    const text = await f.text();
-    loadFromPaste(text);
-  });
-}
-
-function parseCSVish(text){
-  const lines = text.replace(/\r/g,"").split("\n").map(l=>l.trim()).filter(Boolean);
-  if(lines.length < 2) throw new Error("데이터가 너무 적습니다.");
-  const delim = lines[0].includes("\t") && !lines[0].includes(",") ? "\t" : ",";
-  const header = lines[0].split(delim).map(s=>s.trim().toLowerCase());
-  const iDate = header.indexOf("date");
-  const iClose = header.indexOf("close");
-  if(iDate === -1 || iClose === -1){
-    const rows = [];
-    for(const l of lines){
-      const parts = l.split(delim).map(s=>s.trim());
-      if(parts.length < 2) continue;
-      const d = parts[0];
-      const c = Number(parts[1].replace(/,/g,""));
-      const ts = Date.parse(d);
-      if(!isFinite(ts) || !isFinite(c)) continue;
-      rows.push({t:ts, date:d, close:c});
+    function showToast(message) {
+      els.toast.textContent = message;
+      els.toast.classList.add("show");
+      setTimeout(() => els.toast.classList.remove("show"), 1600);
     }
-    rows.sort((a,b)=>a.t-b.t);
-    if(rows.length < 30) throw new Error("유효 데이터가 너무 적습니다(최소 30개 권장).");
-    return dedup(rows);
-  }
 
-  const rows = [];
-  for(let r=1;r<lines.length;r++){
-    const parts = lines[r].split(delim).map(s=>s.trim());
-    if(parts.length <= Math.max(iDate,iClose)) continue;
-    const d = parts[iDate];
-    const c = Number(String(parts[iClose]).replace(/,/g,""));
-    const ts = Date.parse(d);
-    if(!isFinite(ts) || !isFinite(c)) continue;
-    rows.push({t:ts, date:d, close:c});
-  }
-  rows.sort((a,b)=>a.t-b.t);
-  if(rows.length < 30) throw new Error("유효 데이터가 너무 적습니다(최소 30개 권장).");
-  return dedup(rows);
-}
-function dedup(rows){
-  const out=[];
-  let last=null;
-  for(const r of rows){
-    if(r.t===last) out[out.length-1]=r;
-    else out.push(r);
-    last=r.t;
-  }
-  return out;
-}
-
-function makeSyntheticBars(len=520){
-  const bars=[];
-  let p=100;
-  let t = Date.now() - len*86400000;
-  let drift=0.0003;
-  let vol=0.012;
-  for(let i=0;i<len;i++){
-    if(i%140===0 && i>0){
-      drift = (Math.random()*0.0012 - 0.0003);
-      vol = 0.008 + Math.random()*0.018;
+    function showModal(modal) {
+      modal.classList.add("show");
+      modal.setAttribute("aria-hidden", "false");
     }
-    const shock = (Math.random()*2-1) * vol;
-    p = Math.max(1, p*(1+drift+shock));
-    const d = new Date(t + i*86400000);
-    const ds = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-    bars.push({t: d.getTime(), date: ds, close: Number(p.toFixed(2))});
-  }
-  return bars;
-}
 
-function maybeLoadCache(){
-  if(els.cacheMode.value !== "ON") return null;
-  try{
-    const raw = localStorage.getItem(LS_CACHE);
-    if(!raw) return null;
-    const obj = JSON.parse(raw);
-    if(!obj?.bars?.length) return null;
-    return obj;
-  } catch { return null; }
-}
-function saveCache(name, bars){
-  if(els.cacheMode.value !== "ON") return;
-  try{ localStorage.setItem(LS_CACHE, JSON.stringify({name, bars, at:Date.now()})); } catch {}
-}
+    function hideModal(modal) {
+      modal.classList.remove("show");
+      modal.setAttribute("aria-hidden", "true");
+    }
 
-function loadDemo(){
-  const cached = maybeLoadCache();
-  if(cached && cached.name === "DEMO_SYNTH") STATE.bars = cached.bars;
-  else { STATE.bars = makeSyntheticBars(620); saveCache("DEMO_SYNTH", STATE.bars); }
-  setSessionDefault("DEMO / SYNTH");
-  drawChart(STATE.bars, null, null, null);
-  toastKpiReset("데모 로드 완료");
-}
-function loadFromPaste(text){
-  try{
-    const bars = parseCSVish(text);
-    STATE.bars = bars;
-    saveCache("USER_DATA", bars);
-    if(!els.sessionName.value.trim()) els.sessionName.value = "내 데이터";
-    drawChart(STATE.bars, null, null, null);
-    toastKpiReset("데이터 로드 완료");
-    els.mode.value = "PASTE";
-    renderInputArea();
-  } catch(err){ alert("로드 실패: " + err.message); }
-}
-function setSessionDefault(name){ if(!els.sessionName.value.trim()) els.sessionName.value = name; }
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        '"': "&quot;",
+        "'": "&#39;",
+      }[ch]));
+    }
 
-function sma(arr, n){
-  const out = new Array(arr.length).fill(null);
-  let sum=0;
-  for(let i=0;i<arr.length;i++){
-    sum += arr[i];
-    if(i>=n) sum -= arr[i-n];
-    if(i>=n-1) out[i] = sum/n;
-  }
-  return out;
-}
-function rsi(closes, n=14){
-  const out = new Array(closes.length).fill(null);
-  let gain=0, loss=0;
-  for(let i=1;i<closes.length;i++){
-    const ch = closes[i]-closes[i-1];
-    const g = Math.max(0,ch), l = Math.max(0,-ch);
-    if(i<=n){
-      gain += g; loss += l;
-      if(i===n){
-        let rs = loss===0 ? 999 : (gain/n)/(loss/n);
-        out[i] = 100 - (100/(1+rs));
+    function clamp(n, min, max) {
+      return Math.max(min, Math.min(max, n));
+    }
+
+    function daySeed() {
+      const now = new Date();
+      const bucket = Math.floor((now.getHours() * 60 + now.getMinutes()) / 20);
+      return (now.getFullYear() * 10000 + (now.getMonth() + 1) * 100 + now.getDate()) * 97 + bucket * 131;
+    }
+
+    function mulberry32(seed) {
+      return function () {
+        let t = seed += 0x6D2B79F5;
+        t = Math.imul(t ^ (t >>> 15), t | 1);
+        t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+        return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+      };
+    }
+
+    function initAds() {
+      const slots = $$("ins.adsbygoogle");
+      slots.forEach((slot) => {
+        if (slot.dataset.adsInitialized === "1") return;
+        try {
+          (adsbygoogle = window.adsbygoogle || []).push({});
+          slot.dataset.adsInitialized = "1";
+        } catch (_) {
+          // 로컬 개발 환경에서 ads script 미응답 시 무시
+        }
+      });
+    }
+
+    function hintFor(scores) {
+      const labels = [];
+      if (scores.chaos) labels.push("유쾌함");
+      if (scores.talk) labels.push("대화력");
+      if (scores.like) labels.push("호감도");
+      if (scores.vibe) labels.push("분위기");
+      return labels.join(" · ");
+    }
+
+    function initQuiz() {
+      STATE.quiz = QUESTIONS;
+      STATE.idx = 0;
+      STATE.answers = [];
+      STATE.scores = { chaos: 0, like: 0, talk: 0, vibe: 0 };
+      renderQuiz();
+    }
+
+    function renderQuiz() {
+      els.viewLanding.classList.add("hide");
+      els.viewResult.classList.add("hide");
+      els.viewQuiz.classList.remove("hide");
+
+      const total = STATE.quiz.length;
+      const i = STATE.idx;
+      const q = STATE.quiz[i];
+
+      els.qIndex.textContent = String(i + 1);
+      els.qTotal.textContent = String(total);
+      els.qProg.style.width = `${Math.round((i / total) * 100)}%`;
+
+      els.qText.textContent = q.q;
+      els.answers.innerHTML = "";
+
+      q.a.forEach((opt) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "ans";
+        button.innerHTML = `${escapeHtml(opt.t)}<small>${escapeHtml(hintFor(opt.s))}</small>`;
+        button.addEventListener("click", () => chooseAnswer(opt));
+        els.answers.appendChild(button);
+      });
+
+      $("#adMid").style.display = i >= 3 ? "block" : "none";
+      initAds();
+    }
+
+    function chooseAnswer(opt) {
+      Object.entries(opt.s || {}).forEach(([k, v]) => {
+        STATE.scores[k] = (STATE.scores[k] || 0) + v;
+      });
+
+      STATE.answers.push(opt);
+      STATE.idx += 1;
+
+      if (STATE.idx >= STATE.quiz.length) {
+        finishQuiz();
+      } else {
+        renderQuiz();
       }
-    } else {
-      gain = (gain*(n-1)+g)/n;
-      loss = (loss*(n-1)+l)/n;
-      let rs = loss===0 ? 999 : gain/loss;
-      out[i] = 100 - (100/(1+rs));
     }
-  }
-  return out;
-}
-function rollingMax(arr, n){
-  const out = new Array(arr.length).fill(null);
-  for(let i=0;i<arr.length;i++){
-    if(i<n-1) continue;
-    let m=-Infinity;
-    for(let k=i-n+1;k<=i;k++) m = Math.max(m, arr[k]);
-    out[i]=m;
-  }
-  return out;
-}
-function rollingMin(arr, n){
-  const out = new Array(arr.length).fill(null);
-  for(let i=0;i<arr.length;i++){
-    if(i<n-1) continue;
-    let m=Infinity;
-    for(let k=i-n+1;k<=i;k++) m = Math.min(m, arr[k]);
-    out[i]=m;
-  }
-  return out;
-}
 
-function maxDrawdown(eq){
-  let peak=-Infinity, mdd=0;
-  for(const v of eq){
-    if(v>peak) peak=v;
-    const dd = (peak - v)/peak;
-    if(isFinite(dd) && dd>mdd) mdd=dd;
-  }
-  return mdd;
-}
+    function pickCharacter(weightedDims) {
+      const weight = { chaos: 1.15, like: 1.0, talk: 1.05, vibe: 1.0 };
+      let best = null;
 
-function fmtPct(x){ if(!isFinite(x)) return "-"; const p = x*100; return (p>=0?"+":"") + p.toFixed(2) + "%"; }
-function fmtNum(x){ if(!isFinite(x)) return "-"; return Number(x).toLocaleString("ko-KR", {maximumFractionDigits:0}); }
-function gradeFrom(ret, mdd){
-  const score = (ret*100) - (mdd*60);
-  let grade="TRY";
-  if(score >= 180) grade="LEGEND";
-  else if(score >= 120) grade="GODMODE";
-  else if(score >= 80) grade="PRO";
-  else if(score >= 40) grade="NICE";
-  else if(score >= 10) grade="OK";
-  else if(score >= -10) grade="MEH";
-  else grade="RIP";
-  return {score, grade};
-}
+      CHARACTERS.forEach((ch) => {
+        const target = {
+          chaos: (ch.keyDims.chaos || 0) * 4,
+          like: (ch.keyDims.like || 0) * 4,
+          talk: (ch.keyDims.talk || 0) * 4,
+          vibe: (ch.keyDims.vibe || 0) * 4,
+        };
 
-function runBacktest(bars, preset, cfg){
-  const closes = bars.map(b=>b.close);
-  const feeRound = Math.max(0, cfg.fee/100);
-  const slip = Math.max(0, cfg.slip/100);
-  const perSideFee = feeRound/2;
+        const dist =
+          weight.chaos * Math.abs(weightedDims.chaos - target.chaos) +
+          weight.like * Math.abs(weightedDims.like - target.like) +
+          weight.talk * Math.abs(weightedDims.talk - target.talk) +
+          weight.vibe * Math.abs(weightedDims.vibe - target.vibe);
 
-  let cash = cfg.cash;
-  let qty = 0;
-  let inPos = false;
+        const score = -dist + (Math.random() * 0.4 - 0.2);
+        if (!best || score > best.score) best = { score, ch };
+      });
 
-  const eq=[];
-  const trades=[];
-  let wins=0, losses=0;
-
-  const buy = (i, price, reason)=>{
-    const exec = price*(1+slip+perSideFee);
-    const buyQty = cash / exec;
-    if(buyQty<=0) return;
-    qty = buyQty; cash = 0; inPos=true;
-    trades.push({date:bars[i].date, type:"BUY", price:exec, equity: cash + qty*price, reason});
-  };
-  const sell = (i, price, reason, label="SELL")=>{
-    const exec = price*(1-slip-perSideFee);
-    const proceeds = qty*exec;
-    const lastBuy = [...trades].reverse().find(t=>t.type==="BUY");
-    if(lastBuy){
-      const pnl = (exec-lastBuy.price)/lastBuy.price;
-      if(pnl>=0) wins++; else losses++;
+      return best.ch;
     }
-    cash += proceeds; qty=0; inPos=false;
-    trades.push({date:bars[i].date, type:label, price:exec, equity: cash, reason});
-  };
-  const mark = (price)=> eq.push(cash + qty*price);
 
-  let aux1=null, aux2=null;
-  let readyFrom = 0;
-
-  if(preset.type==="MA"){
-    const s = preset.p.s, l = preset.p.l;
-    const maS = sma(closes, s);
-    const maL = sma(closes, l);
-    aux1 = maS; aux2 = maL;
-    readyFrom = l;
-
-    for(let i=0;i<bars.length;i++){
-      const price = closes[i];
-      if(i<readyFrom || maS[i]==null || maL[i]==null || maS[i-1]==null || maL[i-1]==null){ mark(price); continue; }
-      const up = (maS[i-1] <= maL[i-1]) && (maS[i] > maL[i]);
-      const down = (maS[i-1] >= maL[i-1]) && (maS[i] < maL[i]);
-
-      if(!inPos && up) buy(i, price, `MA ${s}/${l} 골든`);
-      if(inPos && down) sell(i, price, `MA ${s}/${l} 데드`);
-      mark(price);
+    function gradeFrom(chaos, like, talk, vibe) {
+      const score = like * 0.3 + talk * 0.27 + vibe * 0.27 + chaos * 0.16;
+      if (score >= 78) return "LEGEND";
+      if (score >= 66) return "PRO";
+      if (score >= 54) return "NICE";
+      if (score >= 42) return "MEME";
+      return "CHAOS";
     }
-  } else if(preset.type==="MOM"){
-    const n = preset.p.n;
-    readyFrom = n;
-    for(let i=0;i<bars.length;i++){
-      const price = closes[i];
-      if(i<readyFrom){ mark(price); continue; }
-      const mom = (closes[i] - closes[i-n]) / closes[i-n];
-      if(!aux1) aux1 = new Array(bars.length).fill(null);
-      aux1[i] = mom;
 
-      if(!inPos && mom>0) buy(i, price, `MOM(${n}) 양수`);
-      if(inPos && mom<=0) sell(i, price, `MOM(${n}) 음수`);
-      mark(price);
+    function buildResultText(res) {
+      const nameText = res.nickname ? `${res.nickname}님의` : "당신의";
+      return [
+        `나는솔로 스타일 캐릭터 테스트 결과`,
+        `${nameText} 결과: ${res.grade} ${res.character.label}`,
+        `혼돈 ${res.dims.chaos} / 호감 ${res.dims.like} / 대화 ${res.dims.talk} / 분위기 ${res.dims.vibe}`,
+        `요약: ${res.character.profile}`,
+        `한 줄 팁: ${res.character.need}`,
+      ].join("\n");
     }
-  } else if(preset.type==="RSI"){
-    const n = preset.p.n, b = preset.p.buy, s = preset.p.sell;
-    const R = rsi(closes, n);
-    aux1 = R;
-    readyFrom = n+2;
 
-    for(let i=0;i<bars.length;i++){
-      const price = closes[i];
-      if(i<readyFrom || R[i]==null){ mark(price); continue; }
-      if(!inPos && R[i] <= b) buy(i, price, `RSI<=${b}`);
-      if(inPos && R[i] >= s) sell(i, price, `RSI>=${s}`);
-      mark(price);
+    function finishQuiz() {
+      const mixBase = Number(els.randMix.value || 30) / 100;
+      const mix = STATE.modeRandom ? clamp(mixBase + 0.1, 0.1, 0.5) : mixBase;
+      const memeLevel = els.memeLevel.value;
+
+      const base = { ...STATE.scores };
+      const seeded = mulberry32(daySeed() + Math.floor(Math.random() * 9999));
+      const noise = {
+        chaos: (seeded() * 2 - 1) * 2,
+        like: (seeded() * 2 - 1) * 2,
+        talk: (seeded() * 2 - 1) * 2,
+        vibe: (seeded() * 2 - 1) * 2,
+      };
+
+      const blended = {};
+      Object.keys(base).forEach((k) => {
+        blended[k] = base[k] * (1 - mix) + (base[k] + noise[k]) * mix;
+      });
+
+      if (memeLevel === "SAFE") blended.chaos -= 0.4;
+      if (memeLevel === "CHAOS") blended.chaos += 0.8;
+
+      const character = pickCharacter(blended);
+
+      const dims = {
+        chaos: clamp(Math.round((blended.chaos + 4) * 12), 0, 100),
+        like: clamp(Math.round((blended.like + 4) * 12), 0, 100),
+        talk: clamp(Math.round((blended.talk + 4) * 12), 0, 100),
+        vibe: clamp(Math.round((blended.vibe + 4) * 12), 0, 100),
+      };
+
+      const res = {
+        day: TODAY,
+        at: Date.now(),
+        nickname: String(els.nickname.value || "").trim().slice(0, 18),
+        mix: Math.round(mix * 100),
+        memeLevel,
+        dims,
+        grade: gradeFrom(dims.chaos, dims.like, dims.talk, dims.vibe),
+        character,
+      };
+
+      res.text = buildResultText(res);
+      STATE.lastResult = res;
+
+      saveJson(LS_LAST, res);
+      saveBest(res);
+
+      els.btnOpenShare.disabled = false;
+      els.btnRestart.disabled = false;
+      renderResult(res);
     }
-  } else if(preset.type==="BREAK"){
-    const hi = preset.p.hi, lo = preset.p.lo;
-    const HH = rollingMax(closes, hi);
-    const LL = rollingMin(closes, lo);
-    aux1 = HH; aux2 = LL;
-    readyFrom = Math.max(hi, lo)+2;
 
-    for(let i=0;i<bars.length;i++){
-      const price = closes[i];
-      if(i<readyFrom || HH[i]==null || LL[i]==null){ mark(price); continue; }
-      const breakout = price > HH[i-1];
-      const breakdown = price < LL[i-1];
-
-      if(!inPos && breakout) buy(i, price, `${hi}일 돌파`);
-      if(inPos && breakdown) sell(i, price, `${lo}일 이탈`);
-      mark(price);
+    function badgeHtml(grade) {
+      if (grade === "LEGEND") return '<span class="badge">LEGEND</span>';
+      if (grade === "PRO") return '<span class="badge">PRO</span>';
+      if (grade === "NICE") return '<span class="badge">NICE</span>';
+      if (grade === "MEME") return '<span class="badge">MEME</span>';
+      return '<span class="badge">CHAOS</span>';
     }
-  }
 
-  if(inPos){
-    const i = bars.length-1;
-    sell(i, closes[i], "종료 청산", "SELL(EOD)");
-    eq[eq.length-1] = cash;
-  }
-
-  const start = cfg.cash;
-  const end = eq[eq.length-1] ?? start;
-  const ret = (end-start)/start;
-  const mdd = maxDrawdown(eq);
-  const tradeCount = trades.filter(t=>t.type.startsWith("SELL")).length;
-  const denom = wins+losses;
-  const winRate = denom>0 ? wins/denom : 0;
-
-  const g = gradeFrom(ret, mdd);
-
-  return {ret, mdd, tradeCount, winRate, eq, trades, aux1, aux2, score:g.score, grade:g.grade};
-}
-
-function drawChart(bars, aux1, aux2, playProgress){
-  const c = els.chart;
-  const ctx = c.getContext("2d");
-  const W=c.width, H=c.height;
-  ctx.clearRect(0,0,W,H);
-
-  const pad={l:58,r:18,t:18,b:46};
-  const x0=pad.l, x1=W-pad.r, y0=pad.t, y1=H-pad.b;
-
-  ctx.strokeStyle="rgba(255,255,255,.08)";
-  ctx.lineWidth=1;
-  for(let i=0;i<=4;i++){
-    const y=y0+(y1-y0)*i/4;
-    ctx.beginPath(); ctx.moveTo(x0,y); ctx.lineTo(x1,y); ctx.stroke();
-  }
-  for(let i=0;i<=6;i++){
-    const x=x0+(x1-x0)*i/6;
-    ctx.beginPath(); ctx.moveTo(x,y0); ctx.lineTo(x,y1); ctx.stroke();
-  }
-
-  if(!bars?.length){
-    ctx.fillStyle="rgba(255,255,255,.65)";
-    ctx.font="18px ui-sans-serif";
-    ctx.fillText("데모로 시작하거나, 복붙/CSV로 실데이터를 넣어줘.", x0, (y0+y1)/2);
-    return;
-  }
-
-  const n = bars.length;
-  const lastIndex = (typeof playProgress==="number") ? Math.max(2, Math.floor(playProgress*(n-1))) : (n-1);
-
-  const closes = bars.map(b=>b.close);
-  let min = Infinity, max = -Infinity;
-  for(let i=0;i<=lastIndex;i++){
-    min = Math.min(min, closes[i]);
-    max = Math.max(max, closes[i]);
-    if(aux1 && aux1[i]!=null && presetIsOverlayPrice()){ min = Math.min(min, aux1[i]); max = Math.max(max, aux1[i]); }
-    if(aux2 && aux2[i]!=null && presetIsOverlayPrice()){ min = Math.min(min, aux2[i]); max = Math.max(max, aux2[i]); }
-  }
-  const padY=(max-min)*0.08 || 1;
-  min-=padY; max+=padY;
-
-  const xAt = (i)=> x0 + (x1-x0) * (i/(n-1));
-  const yAt = (v)=> y1 - (y1-y0) * ((v-min)/(max-min));
-
-  ctx.strokeStyle="rgba(53,240,181,.95)";
-  ctx.lineWidth=2.2;
-  ctx.beginPath();
-  for(let i=0;i<=lastIndex;i++){
-    const x=xAt(i), y=yAt(closes[i]);
-    if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
-  }
-  ctx.stroke();
-
-  const preset = getPreset();
-  if(preset.type==="MA" || preset.type==="BREAK"){
-    drawLine(aux1, "rgba(109,124,255,.95)");
-    drawLine(aux2, "rgba(255,211,110,.55)");
-  } else if(preset.type==="RSI"){
-    drawLine(aux1?.map(v=> v==null?null : (min + (max-min)*(v/100))), "rgba(109,124,255,.55)");
-  } else if(preset.type==="MOM"){
-    drawLine(aux1?.map(v=> v==null?null : (min + (max-min)*Math.max(0, Math.min(1, (v+0.2)/0.4)))), "rgba(109,124,255,.45)");
-  }
-
-  function drawLine(arr, stroke){
-    if(!arr) return;
-    ctx.strokeStyle=stroke;
-    ctx.lineWidth=1.8;
-    ctx.beginPath();
-    let started=false;
-    for(let i=0;i<=lastIndex;i++){
-      const v=arr[i];
-      if(v==null){ started=false; continue; }
-      const x=xAt(i), y=yAt(v);
-      if(!started){ ctx.moveTo(x,y); started=true; } else ctx.lineTo(x,y);
+    function roastLine(res) {
+      const lines = [];
+      if (res.dims.chaos > 70) lines.push("에너지가 좋아서 대화의 온도를 빠르게 올리는 편입니다.");
+      if (res.dims.talk > 70) lines.push("설명력이 좋아 대화 주도권을 잡기 쉽습니다.");
+      if (res.dims.like > 70) lines.push("상대가 편안함을 느끼는 강점이 분명합니다.");
+      if (res.dims.vibe > 70) lines.push("분위기 연출 능력이 좋고 첫인상이 선명합니다.");
+      if (res.dims.chaos < 35) lines.push("조금 더 적극적인 제스처를 추가하면 매력이 더 보입니다.");
+      if (res.dims.talk < 35) lines.push("질문 하나만 더 던져도 대화 밀도가 크게 올라갑니다.");
+      if (!lines.length) lines.push("전체 밸런스가 고른 편이라 안정적인 결과입니다.");
+      return lines[Math.floor(Math.random() * lines.length)];
     }
-    ctx.stroke();
-  }
 
-  ctx.fillStyle="rgba(255,255,255,.65)";
-  ctx.font="12px ui-sans-serif";
-  for(let i=0;i<=4;i++){
-    const v=max-(max-min)*i/4;
-    const y=y0+(y1-y0)*i/4;
-    ctx.fillText(v.toFixed(2), 10, y+4);
-  }
-  const pick=[0, Math.floor(n*0.33), Math.floor(n*0.66), lastIndex];
-  for(const i of pick){
-    const d = new Date(bars[i].t);
-    const s = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-    ctx.fillText(s, Math.max(xAt(i)-38, x0), H-18);
-  }
+    function renderResult(res) {
+      els.viewLanding.classList.add("hide");
+      els.viewQuiz.classList.add("hide");
+      els.viewResult.classList.remove("hide");
 
-  if(typeof playProgress==="number"){
-    const x = xAt(lastIndex);
-    ctx.strokeStyle="rgba(255,255,255,.18)";
-    ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(x,y0); ctx.lineTo(x,y1); ctx.stroke();
-  }
-}
-function presetIsOverlayPrice(){
-  const t = getPreset().type;
-  return (t==="MA" || t==="BREAK");
-}
+      els.resultBadges.innerHTML = `${badgeHtml(res.grade)}<span class="badge">${escapeHtml(res.character.base)}</span><span class="badge">RANDOM ${res.mix}%</span>`;
+      els.resultTitle.textContent = `${res.character.label}`;
+      els.resultSubtitle.textContent = `${res.character.profile} (오락용 결과)`;
 
-function spinPreset(){
-  const weights = PRESETS.map(p=>{
-    if(p.type==="BREAK") return 1.25;
-    if(p.type==="MA") return 1.05;
-    if(p.type==="RSI") return 1.10;
-    if(p.type==="MOM") return 0.95;
-    return 1;
-  });
-  const sum = weights.reduce((a,b)=>a+b,0);
-  let r = Math.random()*sum;
-  let idx=0;
-  for(let i=0;i<weights.length;i++){
-    r -= weights[i];
-    if(r<=0){ idx=i; break; }
-  }
-  els.preset.value = PRESETS[idx].id;
-  updatePresetDesc();
-  pulse("🎲 룰렛: " + PRESETS[idx].name);
-}
+      els.kChaos.textContent = String(res.dims.chaos);
+      els.kLike.textContent = String(res.dims.like);
+      els.kTalk.textContent = String(res.dims.talk);
+      els.kVibe.textContent = String(res.dims.vibe);
 
-function aiRecommend(){
-  if(!STATE.bars.length){ spinPreset(); return; }
-  const closes = STATE.bars.map(b=>b.close);
-  let v=0, n=0;
-  for(let i=1;i<closes.length;i++){
-    const r = (closes[i]-closes[i-1])/closes[i-1];
-    if(isFinite(r)){ v += Math.abs(r); n++; }
-  }
-  const vol = v/(n||1);
-  const long = Math.min(240, closes.length-1);
-  const tr = (closes[closes.length-1]-closes[closes.length-1-long])/closes[closes.length-1-long];
+      els.resultTips.innerHTML =
+        `<strong>해석 가이드</strong><br>` +
+        `강점: ${escapeHtml(res.character.good.join(", "))}<br>` +
+        `주의: ${escapeHtml(res.character.bad.join(", "))}<br>` +
+        `한 줄 팁: ${escapeHtml(res.character.need)}<br><br>` +
+        `${escapeHtml(roastLine(res))}`;
 
-  let pick;
-  if(vol > 0.018) pick = "MA_10_30";
-  else if(tr > 0.25) pick = "BREAK_55";
-  else if(tr > 0.08) pick = "MOM_120";
-  else pick = "RSI_14_REV";
-  els.preset.value = pick;
-  updatePresetDesc();
-  pulse("🤖 AI 추천: " + getPreset().name);
-}
-
-function run(){
-  if(!STATE.bars.length){ loadDemo(); }
-
-  const cfg = { cash: Number(els.cash.value), fee: Number(els.fee.value), slip: Number(els.slip.value) };
-  if(!isFinite(cfg.cash) || cfg.cash<=0) return alert("초기자본을 확인해줘.");
-  if(!isFinite(cfg.fee) || cfg.fee<0) cfg.fee=0;
-  if(!isFinite(cfg.slip) || cfg.slip<0) cfg.slip=0;
-
-  const preset = getPreset();
-  const speed = els.speed.value;
-
-  setProgress(0);
-  clearLogs();
-  toastKpiReset("시뮬레이션 시작…");
-
-  if(speed === "SHOW"){
-    let p=0;
-    const id = setInterval(()=>{
-      p += 0.05;
-      setProgress(Math.min(100, p*100));
-      drawChart(STATE.bars, null, null, Math.min(1,p));
-      if(p>=1){ clearInterval(id); finalizeRun(cfg, preset); }
-    }, 60);
-  } else {
-    let p=0;
-    const id = setInterval(()=>{
-      p += 0.20;
-      setProgress(Math.min(100, p*100));
-      if(p>=1){ clearInterval(id); finalizeRun(cfg, preset); }
-    }, 60);
-  }
-}
-
-function finalizeRun(cfg, preset){
-  const res = runBacktest(STATE.bars, preset, cfg);
-  STATE.result = res;
-  STATE.equity = res.eq;
-  STATE.trades = res.trades;
-
-  els.kRet.textContent = fmtPct(res.ret);
-  els.kMdd.textContent = fmtPct(-res.mdd);
-  els.kTrades.textContent = String(res.tradeCount);
-  els.kWin.textContent = (res.tradeCount>0 ? (res.winRate*100).toFixed(1)+"%" : "-");
-  els.kGrade.innerHTML = gradeBadge(res.grade, res.score);
-
-  renderLogs(res.trades);
-  drawChart(STATE.bars, res.aux1, res.aux2, null);
-  setProgress(100);
-
-  updateBestToday(res);
-  pulse(`${res.grade}  (${fmtPct(res.ret)} / MDD ${fmtPct(-res.mdd)})`);
-}
-
-function gradeBadge(grade, score){
-  const g = String(grade||"TRY");
-  let cls="badge";
-  if(["LEGEND","GODMODE"].includes(g)) cls+=" gold";
-  else if(["PRO","NICE","OK"].includes(g)) cls+=" good";
-  else if(["RIP"].includes(g)) cls+=" bad";
-  return `<span class="${cls}">${g}</span> <span class="tiny muted">score ${score.toFixed(1)}</span>`;
-}
-
-function updateBestToday(res){
-  const best = loadBest();
-  const cur = {
-    day: TODAY,
-    score: res.score,
-    grade: res.grade,
-    ret: res.ret,
-    mdd: res.mdd,
-    name: (els.sessionName.value || "세션").slice(0,60),
-    preset: getPreset().name,
-    at: Date.now()
-  };
-  let kept = best;
-  if(!best || cur.score > best.score){ kept = cur; saveBest(cur); }
-  STATE.bestToday = kept;
-  els.kBest.textContent = kept ? `${kept.grade} (${(kept.score).toFixed(0)})` : "-";
-}
-
-function clearLogs(){ els.log.innerHTML = `<tr><td colspan="4" class="muted">진행 중…</td></tr>`; }
-function renderLogs(trades){
-  if(!trades?.length){
-    els.log.innerHTML = `<tr><td colspan="4" class="muted">거래가 없습니다(신호 없음).</td></tr>`;
-    return;
-  }
-  els.log.innerHTML = "";
-  for(const t of trades.slice(-200)){
-    const tr = document.createElement("tr");
-    tr.innerHTML = `<td style="font-family:ui-monospace;">${t.date}</td><td><b>${t.type}</b><div class="tiny muted">${t.reason||""}</div></td><td style="font-family:ui-monospace;">${Number(t.price).toFixed(2)}</td><td style="font-family:ui-monospace;">${fmtNum(t.equity)}</td>`;
-    els.log.appendChild(tr);
-  }
-}
-
-function exportTrades(){
-  if(!STATE.result) return alert("먼저 실행해줘.");
-  const rows = [["date","type","price","equity","reason"]];
-  for(const t of STATE.trades){ rows.push([t.date, t.type, String(t.price), String(t.equity), t.reason||""]); }
-  const csv = rows.map(r => r.map(v=>{
-    const s = String(v);
-    return (s.includes(",") || s.includes('"') || s.includes("\n")) ? `"${s.replace(/"/g,'""')}"` : s;
-  }).join(",")).join("\n");
-
-  const blob = new Blob([csv], {type:"text/csv;charset=utf-8"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "trades.csv";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(()=>URL.revokeObjectURL(a.href), 500);
-}
-
-function saveRecord(){
-  if(!STATE.result) return alert("먼저 실행해줘.");
-  const key="qa_last_run_v1";
-  const snap = {
-    day: TODAY,
-    at: Date.now(),
-    name: els.sessionName.value || "세션",
-    preset: getPreset(),
-    result: {ret:STATE.result.ret, mdd:STATE.result.mdd, grade:STATE.result.grade, score:STATE.result.score},
-  };
-  localStorage.setItem(key, JSON.stringify(snap));
-  pulse("기록 저장됨 ✅");
-}
-
-function drawShare(){
-  const c = els.shareCanvas;
-  const ctx = c.getContext("2d");
-  const W=c.width, H=c.height;
-  ctx.clearRect(0,0,W,H);
-
-  const grad = ctx.createLinearGradient(0,0,W,H);
-  grad.addColorStop(0, "rgba(109,124,255,.40)");
-  grad.addColorStop(0.55, "rgba(53,240,181,.22)");
-  grad.addColorStop(1, "rgba(255,211,110,.18)");
-  ctx.fillStyle = "rgba(5,7,16,1)";
-  ctx.fillRect(0,0,W,H);
-  ctx.fillStyle = grad;
-  ctx.fillRect(0,0,W,H);
-
-  roundRect(ctx, 60, 60, W-120, H-120, 36, "rgba(0,0,0,.55)", "rgba(255,255,255,.12)");
-
-  ctx.fillStyle="rgba(255,255,255,.92)";
-  ctx.font="900 54px ui-sans-serif";
-  ctx.fillText("퀀트 아케이드", 110, 160);
-
-  ctx.fillStyle="rgba(255,255,255,.72)";
-  ctx.font="700 26px ui-sans-serif";
-  ctx.fillText("게임형 백테스터 결과", 110, 205);
-
-  const name = (els.sessionName.value || "세션").slice(0,40);
-  ctx.fillStyle="rgba(255,255,255,.86)";
-  ctx.font="800 34px ui-sans-serif";
-  ctx.fillText(name, 110, 275);
-
-  if(!STATE.result){
-    ctx.fillStyle="rgba(255,255,255,.70)";
-    ctx.font="700 24px ui-sans-serif";
-    ctx.fillText("아직 결과가 없어요. 🚀 백테스트 후 다시 열어줘!", 110, 340);
-    return;
-  }
-
-  const g = STATE.result.grade;
-  const ret = fmtPct(STATE.result.ret);
-  const mdd = fmtPct(-STATE.result.mdd);
-  const presetName = getPreset().name;
-
-  let badge = "rgba(255,255,255,.14)";
-  let badgeText = "rgba(255,255,255,.92)";
-  if(["LEGEND","GODMODE"].includes(g)) badge="rgba(255,211,110,.22)";
-  else if(["PRO","NICE","OK"].includes(g)) badge="rgba(53,240,181,.18)";
-  else if(["RIP"].includes(g)) badge="rgba(255,91,122,.18)";
-
-  roundRect(ctx, 110, 310, 260, 62, 999, badge, "rgba(255,255,255,.12)");
-  ctx.fillStyle=badgeText;
-  ctx.font="900 30px ui-sans-serif";
-  ctx.fillText(g, 150, 352);
-
-  ctx.fillStyle="rgba(255,255,255,.86)";
-  ctx.font="900 46px ui-sans-serif";
-  ctx.fillText(ret, 110, 430);
-
-  ctx.fillStyle="rgba(255,255,255,.72)";
-  ctx.font="800 22px ui-sans-serif";
-  ctx.fillText(`MDD ${mdd}  ·  ${presetName}`, 110, 470);
-
-  ctx.fillStyle="rgba(255,255,255,.62)";
-  ctx.font="700 18px ui-sans-serif";
-  ctx.fillText("data processed locally · not investment advice", 110, 540);
-
-  if(STATE.bars?.length){
-    const closes = STATE.bars.map(b=>b.close);
-    const x0=650, y0=220, w=470, h=260;
-    roundRect(ctx, x0, y0, w, h, 26, "rgba(255,255,255,.06)", "rgba(255,255,255,.10)");
-    let min=Math.min(...closes), max=Math.max(...closes);
-    const pad=(max-min)*0.08 || 1; min-=pad; max+=pad;
-
-    ctx.strokeStyle="rgba(53,240,181,.90)";
-    ctx.lineWidth=3;
-    ctx.beginPath();
-    for(let i=0;i<closes.length;i++){
-      const x = x0+24 + (w-48) * (i/(closes.length-1));
-      const y = y0+h-24 - (h-48) * ((closes[i]-min)/(max-min));
-      if(i===0) ctx.moveTo(x,y); else ctx.lineTo(x,y);
+      showToast(`결과: ${res.grade} ${res.character.label}`);
+      initAds();
     }
-    ctx.stroke();
-  }
-}
-function roundRect(ctx,x,y,w,h,r,fill,stroke){
-  ctx.beginPath();
-  ctx.moveTo(x+r,y);
-  ctx.arcTo(x+w,y,x+w,y+h,r);
-  ctx.arcTo(x+w,y+h,x,y+h,r);
-  ctx.arcTo(x,y+h,x,y,r);
-  ctx.arcTo(x,y,x+w,y,r);
-  ctx.closePath();
-  if(fill){ ctx.fillStyle=fill; ctx.fill(); }
-  if(stroke){ ctx.strokeStyle=stroke; ctx.lineWidth=2; ctx.stroke(); }
-}
-function downloadShare(){
-  drawShare();
-  const c = els.shareCanvas;
-  const a = document.createElement("a");
-  a.href = c.toDataURL("image/png");
-  a.download = "quant-arcade-share.png";
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-}
 
-function setProgress(p){ els.prog.style.width = `${Math.max(0, Math.min(100, p))}%`; }
-function pulse(msg){
-  els.kGrade.insertAdjacentHTML("beforeend", `<div class="tiny muted" style="margin-top:6px;">${escapeHtml(msg)}</div>`);
-  setTimeout(()=> {
-    const tiny = els.kGrade.querySelector(".tiny.muted");
-    if(tiny) tiny.remove();
-  }, 1800);
-}
-function toastKpiReset(status){
-  els.kGrade.textContent = "-";
-  els.kRet.textContent = "-";
-  els.kMdd.textContent = "-";
-  els.kTrades.textContent = "-";
-  els.kWin.textContent = "-";
-  setProgress(0);
-  els.log.innerHTML = `<tr><td colspan="4" class="muted">${escapeHtml(status || "준비됨")}</td></tr>`;
-}
-function escapeHtml(s){ return String(s).replace(/[&<>"']/g, m=>({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m])); }
+    function roundRect(ctx, x, y, w, h, r, fill, stroke) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+      if (fill) { ctx.fillStyle = fill; ctx.fill(); }
+      if (stroke) { ctx.strokeStyle = stroke; ctx.lineWidth = 2; ctx.stroke(); }
+    }
 
-els.btnHow.addEventListener("click", ()=> showModal(els.mHow));
-els.btnShare.addEventListener("click", ()=> { drawShare(); showModal(els.mShare); });
-els.btnCopyShare.addEventListener("click", downloadShare);
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight, font, fillStyle) {
+      ctx.font = font;
+      ctx.fillStyle = fillStyle;
+      const words = String(text).split(" ");
+      let line = "";
+      for (let i = 0; i < words.length; i += 1) {
+        const candidate = line + words[i] + " ";
+        if (ctx.measureText(candidate).width > maxWidth && i > 0) {
+          ctx.fillText(line, x, y);
+          line = words[i] + " ";
+          y += lineHeight;
+        } else {
+          line = candidate;
+        }
+      }
+      ctx.fillText(line, x, y);
+    }
 
-$$("[data-close]").forEach(b=>{ b.addEventListener("click", ()=> hideModal($(b.getAttribute("data-close")))); });
-function showModal(m){ m.classList.add("show"); }
-function hideModal(m){ m.classList.remove("show"); }
+    async function drawShareCard(res) {
+      const canvas = els.shareCanvas;
+      const ctx = canvas.getContext("2d");
+      const w = canvas.width;
+      const h = canvas.height;
 
-els.mode.addEventListener("change", renderInputArea);
+      ctx.clearRect(0, 0, w, h);
 
-els.btnDemo.addEventListener("click", ()=>{ els.mode.value = "DEMO"; renderInputArea(); loadDemo(); });
-els.btnSpin.addEventListener("click", spinPreset);
-els.btnAI.addEventListener("click", aiRecommend);
-els.btnRun.addEventListener("click", run);
-els.btnSave.addEventListener("click", saveRecord);
-els.btnExport.addEventListener("click", exportTrades);
+      const grad = ctx.createLinearGradient(0, 0, w, h);
+      grad.addColorStop(0, "rgba(121,169,255,0.38)");
+      grad.addColorStop(0.55, "rgba(107,227,199,0.24)");
+      grad.addColorStop(1, "rgba(255,211,139,0.2)");
 
-els.preset.addEventListener("change", updatePresetDesc);
+      ctx.fillStyle = "#071426";
+      ctx.fillRect(0, 0, w, h);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, w, h);
 
-els.btnReset.addEventListener("click", ()=>{
-  if(!confirm("로컬 캐시/기록을 모두 초기화할까요?")) return;
-  wipeAll();
-  STATE = {bars:[],equity:[],trades:[],result:null,lastStrategy:null,bestToday:null};
-  els.sessionName.value="";
-  toastKpiReset("초기화 완료");
-  drawChart([], null, null, null);
-});
+      roundRect(ctx, 56, 56, w - 112, h - 112, 28, "rgba(0,0,0,0.45)", "rgba(255,255,255,0.12)");
 
-document.addEventListener("keydown", (e)=>{ if(e.key==="Escape"){ hideModal(els.mHow); hideModal(els.mShare); } });
+      ctx.fillStyle = "rgba(255,255,255,0.93)";
+      ctx.font = "900 52px 'Noto Sans KR'";
+      ctx.fillText("나는솔로 스타일 캐릭터 테스트", 104, 158);
 
-function init(){
-  setPresets();
-  renderInputArea();
+      ctx.fillStyle = "rgba(255,255,255,0.8)";
+      ctx.font = "700 30px 'Noto Sans KR'";
+      ctx.fillText(`${res.grade} ${res.character.label}`, 104, 244);
 
-  const best = loadBest();
-  if(best){ STATE.bestToday = best; els.kBest.textContent = `${best.grade} (${best.score.toFixed(0)})`; }
-  else { els.kBest.textContent = "-"; }
+      ctx.font = "600 24px 'Noto Sans KR'";
+      ctx.fillText(`혼돈 ${res.dims.chaos} · 호감 ${res.dims.like} · 대화 ${res.dims.talk} · 분위기 ${res.dims.vibe}`, 104, 294);
 
-  loadDemo();
-}
-init();
-</script>
+      wrapText(ctx, `요약: ${res.character.profile}`, 104, 356, 640, 34, "600 24px 'Noto Sans KR'", "rgba(255,255,255,0.82)");
+      wrapText(ctx, `팁: ${res.character.need}`, 104, 440, 640, 34, "600 24px 'Noto Sans KR'", "rgba(255,255,255,0.82)");
+
+      ctx.font = "500 18px 'Noto Sans KR'";
+      ctx.fillStyle = "rgba(255,255,255,0.62)";
+      ctx.fillText("For entertainment only · 사진은 저장하지 않음", 104, 540);
+
+      if (STATE.photoDataUrl) {
+        const img = await loadImage(STATE.photoDataUrl);
+        const cx = 955;
+        const cy = 320;
+        const r = 132;
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, r, 0, Math.PI * 2);
+        ctx.closePath();
+        ctx.clip();
+
+        const scale = Math.max((r * 2) / img.width, (r * 2) / img.height);
+        const dw = img.width * scale;
+        const dh = img.height * scale;
+        ctx.drawImage(img, cx - dw / 2, cy - dh / 2, dw, dh);
+        ctx.restore();
+
+        ctx.strokeStyle = "rgba(255,255,255,0.2)";
+        ctx.lineWidth = 6;
+        ctx.beginPath();
+        ctx.arc(cx, cy, r + 1, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+
+    function loadImage(url) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => resolve(img);
+        img.onerror = reject;
+        img.src = url;
+      });
+    }
+
+    function fileToDataUrl(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = () => reject(reader.error);
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function downloadCanvas(canvas, filename) {
+      const a = document.createElement("a");
+      a.href = canvas.toDataURL("image/png");
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+    }
+
+    function saveJson(key, value) {
+      try {
+        localStorage.setItem(key, JSON.stringify(value));
+      } catch (_) {
+        showToast("브라우저 저장소에 기록하지 못했습니다.");
+      }
+    }
+
+    function loadJson(key) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : null;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    function bestScore(res) {
+      return res.dims.like * 0.32 + res.dims.vibe * 0.28 + res.dims.talk * 0.24 + res.dims.chaos * 0.16;
+    }
+
+    function saveBest(res) {
+      const current = {
+        day: TODAY,
+        title: `${res.grade} ${res.character.label}`,
+        score: bestScore(res),
+      };
+
+      const old = loadJson(LS_BEST);
+      if (!old || old.day !== TODAY || current.score > old.score) saveJson(LS_BEST, current);
+    }
+
+    function loadLastResult() {
+      return loadJson(LS_LAST);
+    }
+
+    function resetAll() {
+      STATE = {
+        modeRandom: false,
+        quiz: null,
+        idx: 0,
+        scores: {},
+        answers: [],
+        lastResult: null,
+        photoDataUrl: null,
+      };
+
+      els.btnOpenShare.disabled = true;
+      els.btnRestart.disabled = true;
+      els.viewQuiz.classList.add("hide");
+      els.viewResult.classList.add("hide");
+      els.viewLanding.classList.remove("hide");
+    }
+
+    els.btnHow.addEventListener("click", () => showModal(els.mHow));
+
+    $$("[data-close]").forEach((btn) => {
+      btn.addEventListener("click", () => hideModal($(btn.getAttribute("data-close"))));
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        hideModal(els.mHow);
+        hideModal(els.mShare);
+      }
+    });
+
+    els.btnStart.addEventListener("click", initQuiz);
+    els.btnStart2.addEventListener("click", initQuiz);
+    els.btnTryAgain.addEventListener("click", initQuiz);
+    els.btnRestart.addEventListener("click", initQuiz);
+
+    els.btnRandom.addEventListener("click", () => {
+      STATE.modeRandom = !STATE.modeRandom;
+      els.btnRandom.classList.toggle("primary", STATE.modeRandom);
+      showToast(STATE.modeRandom ? "랜덤 강화 활성화" : "랜덤 강화 해제");
+    });
+
+    els.btnSkip.addEventListener("click", () => {
+      initQuiz();
+      const seeded = mulberry32(daySeed());
+      for (let i = 0; i < QUESTIONS.length; i += 1) {
+        const q = QUESTIONS[i];
+        const picked = q.a[Math.floor(seeded() * q.a.length)];
+        Object.entries(picked.s || {}).forEach(([k, v]) => {
+          STATE.scores[k] = (STATE.scores[k] || 0) + v;
+        });
+      }
+      STATE.idx = QUESTIONS.length;
+      finishQuiz();
+    });
+
+    els.btnCopyText.addEventListener("click", async () => {
+      if (!STATE.lastResult) return;
+      try {
+        await navigator.clipboard.writeText(STATE.lastResult.text);
+        showToast("결과 문구를 복사했습니다.");
+      } catch (_) {
+        showToast("복사 권한이 없어 실패했습니다.");
+      }
+    });
+
+    els.btnMakeShare.addEventListener("click", async () => {
+      if (!STATE.lastResult) return;
+      await drawShareCard(STATE.lastResult);
+      showModal(els.mShare);
+    });
+
+    els.btnOpenShare.addEventListener("click", async () => {
+      if (!STATE.lastResult) {
+        const last = loadLastResult();
+        if (last) STATE.lastResult = last;
+      }
+      if (!STATE.lastResult) {
+        showToast("먼저 결과를 만들어주세요.");
+        return;
+      }
+      await drawShareCard(STATE.lastResult);
+      showModal(els.mShare);
+    });
+
+    els.btnDownloadShare.addEventListener("click", async () => {
+      if (!STATE.lastResult) return;
+      await drawShareCard(STATE.lastResult);
+      downloadCanvas(els.shareCanvas, "character-test-share.png");
+    });
+
+    els.btnCopyShareText.addEventListener("click", async () => {
+      if (!STATE.lastResult) return;
+      const msg = [
+        "나는솔로 스타일 캐릭터 테스트 결과가 나왔어요.",
+        `${STATE.lastResult.grade} ${STATE.lastResult.character.label}`,
+        "너도 해보고 결과 비교해보자.",
+      ].join("\n");
+      try {
+        await navigator.clipboard.writeText(msg);
+        showToast("공유 문구를 복사했습니다.");
+      } catch (_) {
+        showToast("복사에 실패했습니다.");
+      }
+    });
+
+    els.btnReset.addEventListener("click", () => {
+      const ok = window.confirm("저장된 최근 결과와 기록을 삭제할까요?");
+      if (!ok) return;
+      localStorage.removeItem(LS_BEST);
+      localStorage.removeItem(LS_LAST);
+      resetAll();
+      showToast("저장 데이터를 초기화했습니다.");
+    });
+
+    els.photoInput.addEventListener("change", async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) {
+        STATE.photoDataUrl = null;
+        return;
+      }
+
+      const allowed = ["image/png", "image/jpeg", "image/webp"];
+      if (!allowed.includes(file.type)) {
+        e.target.value = "";
+        showToast("PNG/JPG/WEBP 파일만 업로드할 수 있습니다.");
+        return;
+      }
+
+      if (file.size > 5 * 1024 * 1024) {
+        e.target.value = "";
+        showToast("파일 크기는 5MB 이하만 가능합니다.");
+        return;
+      }
+
+      try {
+        STATE.photoDataUrl = await fileToDataUrl(file);
+        showToast("사진을 불러왔습니다.");
+      } catch (_) {
+        showToast("사진 처리 중 오류가 발생했습니다.");
+      }
+    });
+
+    function boot() {
+      resetAll();
+      const last = loadLastResult();
+      if (last) {
+        STATE.lastResult = last;
+        els.btnOpenShare.disabled = false;
+        els.btnRestart.disabled = false;
+      }
+      initAds();
+    }
+
+    boot();
+  </script>
 </body>
 </html>
